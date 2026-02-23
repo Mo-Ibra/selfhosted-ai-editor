@@ -3,7 +3,12 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
 import http from 'node:http'
+import os from 'node:os'
 import chokidar, { FSWatcher } from 'chokidar'
+import { createRequire } from 'node:module'
+const require = createRequire(import.meta.url)
+const pty = require('node-pty')
+import type { IPty } from 'node-pty'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -289,6 +294,58 @@ IMPORTANT RULES:
     req.write(requestBody)
     req.end()
   })
+})
+
+// ─── Terminal IPC ──────────────────────────────────────────────────
+
+const ptyProcesses: Map<number, IPty> = new Map()
+
+ipcMain.handle('pty:spawn', async (event, cwd: string) => {
+  const shell = os.platform() === 'win32' ? 'powershell.exe' : (process.env.SHELL || 'bash')
+
+  const ptyProcess = pty.spawn(shell, [], {
+    name: 'xterm-color',
+    cols: 80,
+    rows: 24,
+    cwd: cwd || os.homedir(),
+    env: process.env as Record<string, string>,
+  })
+
+  const pid = ptyProcess.pid
+  ptyProcesses.set(pid, ptyProcess)
+
+  ptyProcess.onData((data: string) => {
+    event.sender.send(`pty:data-${pid}`, data)
+  })
+
+  ptyProcess.onExit(({ exitCode, signal }: { exitCode: number; signal?: number }) => {
+    event.sender.send(`pty:exit-${pid}`, { exitCode, signal })
+    ptyProcesses.delete(pid)
+  })
+
+  return pid
+})
+
+ipcMain.on('pty:write', (_event, pid: number, data: string) => {
+  const ptyProcess = ptyProcesses.get(pid)
+  if (ptyProcess) {
+    ptyProcess.write(data)
+  }
+})
+
+ipcMain.on('pty:resize', (_event, pid: number, cols: number, rows: number) => {
+  const ptyProcess = ptyProcesses.get(pid)
+  if (ptyProcess) {
+    ptyProcess.resize(cols, rows)
+  }
+})
+
+ipcMain.on('pty:kill', (_event, pid: number) => {
+  const ptyProcess = ptyProcesses.get(pid)
+  if (ptyProcess) {
+    ptyProcess.kill()
+    ptyProcesses.delete(pid)
+  }
 })
 
 // ─── App Lifecycle ─────────────────────────────────────────────────

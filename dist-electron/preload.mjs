@@ -20,5 +20,16 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   },
   windowMinimize: () => electron.ipcRenderer.send("window:minimize"),
   windowMaximize: () => electron.ipcRenderer.send("window:maximize"),
-  windowClose: () => electron.ipcRenderer.send("window:close")
+  windowClose: () => electron.ipcRenderer.send("window:close"),
+  // Terminal
+  ptySpawn: (cwd) => electron.ipcRenderer.invoke("pty:spawn", cwd),
+  ptyWrite: (pid, data) => electron.ipcRenderer.send("pty:write", pid, data),
+  ptyResize: (pid, cols, rows) => electron.ipcRenderer.send("pty:resize", pid, cols, rows),
+  ptyKill: (pid) => electron.ipcRenderer.send("pty:kill", pid),
+  onPtyData: (pid, callback) => {
+    electron.ipcRenderer.on(`pty:data-${pid}`, (_event, data) => callback(data));
+  },
+  onPtyExit: (pid, callback) => {
+    electron.ipcRenderer.on(`pty:exit-${pid}`, (_event, payload) => callback(payload));
+  }
 });

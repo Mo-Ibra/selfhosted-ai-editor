@@ -21,4 +21,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowMinimize: () => ipcRenderer.send('window:minimize'),
   windowMaximize: () => ipcRenderer.send('window:maximize'),
   windowClose: () => ipcRenderer.send('window:close'),
+
+  // Terminal
+  ptySpawn: (cwd: string) => ipcRenderer.invoke('pty:spawn', cwd),
+  ptyWrite: (pid: number, data: string) => ipcRenderer.send('pty:write', pid, data),
+  ptyResize: (pid: number, cols: number, rows: number) => ipcRenderer.send('pty:resize', pid, cols, rows),
+  ptyKill: (pid: number) => ipcRenderer.send('pty:kill', pid),
+  onPtyData: (pid: number, callback: (data: string) => void) => {
+    ipcRenderer.on(`pty:data-${pid}`, (_event, data) => callback(data))
+  },
+  onPtyExit: (pid: number, callback: (payload: { exitCode: number; signal?: number }) => void) => {
+    ipcRenderer.on(`pty:exit-${pid}`, (_event, payload) => callback(payload))
+  },
 })

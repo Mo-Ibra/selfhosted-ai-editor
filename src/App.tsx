@@ -3,6 +3,7 @@ import './App.css'
 import FileExplorer from './components/FileExplorer'
 import Editor from './components/Editor'
 import AIChat from './components/AIChat'
+import Terminal from './components/Terminal'
 import { FileNode, ChatMessage, AIEdit, AIResponse } from './types'
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
   const [fileContents, setFileContents] = useState<Record<string, string>>({})
   const [pinnedFiles, setPinnedFiles] = useState<string[]>([])
   const [dirtyFiles, setDirtyFiles] = useState<Set<string>>(new Set())
+  const [showTerminal, setShowTerminal] = useState(false)
 
   // ─── File Watcher Setup ──────────────────────────────────────────
   useEffect(() => {
@@ -28,6 +30,17 @@ export default function App() {
       window.electronAPI.removeAllListeners('fs:changed')
     }
   }, [folderPath])
+
+  // ─── Terminal Toggle ─────────────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === '`') {
+        setShowTerminal((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // ─── Handle AI Chat ──────────────────────────────────────────────
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -373,6 +386,13 @@ export default function App() {
               onRejectAll={handleRejectAll}
               onSave={handleSave}
             />
+
+            {showTerminal && (
+              <Terminal
+                cwd={folderPath}
+                onClose={() => setShowTerminal(false)}
+              />
+            )}
           </div>
 
           <AIChat

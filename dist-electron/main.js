@@ -7,10 +7,11 @@ import * as sp from "node:path";
 import sp__default, { resolve, join, relative, sep } from "node:path";
 import fs, { unwatchFile, watchFile, watch as watch$1, stat as stat$1 } from "node:fs";
 import http from "node:http";
+import os, { type } from "node:os";
 import { EventEmitter } from "node:events";
 import { lstat, stat, readdir, realpath, open } from "node:fs/promises";
 import { Readable } from "node:stream";
-import { type } from "node:os";
+import { createRequire } from "node:module";
 const EntryTypes = {
   FILE_TYPE: "files",
   DIR_TYPE: "directories",
@@ -1724,6 +1725,8 @@ function watch(paths, options = {}) {
   return watcher2;
 }
 const chokidar = { watch, FSWatcher };
+const require$1 = createRequire(import.meta.url);
+const pty = require$1("node-pty");
 const __dirname$1 = sp__default.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = sp__default.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -1966,6 +1969,46 @@ IMPORTANT RULES:
     req.write(requestBody);
     req.end();
   });
+});
+const ptyProcesses = /* @__PURE__ */ new Map();
+ipcMain.handle("pty:spawn", async (event, cwd) => {
+  const shell = os.platform() === "win32" ? "powershell.exe" : process.env.SHELL || "bash";
+  const ptyProcess = pty.spawn(shell, [], {
+    name: "xterm-color",
+    cols: 80,
+    rows: 24,
+    cwd: cwd || os.homedir(),
+    env: process.env
+  });
+  const pid = ptyProcess.pid;
+  ptyProcesses.set(pid, ptyProcess);
+  ptyProcess.onData((data) => {
+    event.sender.send(`pty:data-${pid}`, data);
+  });
+  ptyProcess.onExit(({ exitCode, signal }) => {
+    event.sender.send(`pty:exit-${pid}`, { exitCode, signal });
+    ptyProcesses.delete(pid);
+  });
+  return pid;
+});
+ipcMain.on("pty:write", (_event, pid, data) => {
+  const ptyProcess = ptyProcesses.get(pid);
+  if (ptyProcess) {
+    ptyProcess.write(data);
+  }
+});
+ipcMain.on("pty:resize", (_event, pid, cols, rows) => {
+  const ptyProcess = ptyProcesses.get(pid);
+  if (ptyProcess) {
+    ptyProcess.resize(cols, rows);
+  }
+});
+ipcMain.on("pty:kill", (_event, pid) => {
+  const ptyProcess = ptyProcesses.get(pid);
+  if (ptyProcess) {
+    ptyProcess.kill();
+    ptyProcesses.delete(pid);
+  }
 });
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

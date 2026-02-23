@@ -48,6 +48,14 @@ export interface ElectronAPI {
   windowClose: () => void
   windowMinimize: () => void
   windowMaximize: () => void
+
+  // Terminal
+  ptySpawn: (cwd: string) => Promise<number>
+  ptyWrite: (pid: number, data: string) => void
+  ptyResize: (pid: number, cols: number, rows: number) => void
+  ptyKill: (pid: number) => void
+  onPtyData: (pid: number, callback: (data: string) => void) => void
+  onPtyExit: (pid: number, callback: (payload: { exitCode: number; signal?: number }) => void) => void
 }
 
 declare global {
