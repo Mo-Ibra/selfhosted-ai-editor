@@ -72,28 +72,29 @@ export default function Editor({
       // Highlight old lines (red - to be removed)
       if (edit.oldContent && oldLines.length > 0) {
         newDecorations.push({
-          range: new monaco.Range(edit.startLine, 1, edit.endLine, 1),
+          range: new monaco.Range(edit.startLine, 1, edit.endLine, 1000),
           options: {
             isWholeLine: true,
             className: 'diff-removed-line',
-            glyphMarginClassName: 'diff-gutter-removed',
+            linesDecorationsClassName: 'diff-gutter-removed',
             overviewRuler: {
               color: '#f38ba8',
               position: monaco.editor.OverviewRulerLane.Left,
             },
+            marginClassName: 'diff-margin-removed',
           },
         })
       }
 
-      // Highlight new lines (green - to be added)  
-      const insertLine = edit.startLine
+      // Show new lines as a block after the target range
+      const endLine = edit.endLine
       newDecorations.push({
-        range: new monaco.Range(insertLine, 1, insertLine, 1),
+        range: new monaco.Range(endLine, 1, endLine, 1000),
         options: {
           isWholeLine: true,
           after: {
-            content: `  + ${newLines.slice(0, 3).join(' | ')}${newLines.length > 3 ? '...' : ''}`,
-            inlineClassName: 'diff-added-preview',
+            content: `\n${newLines.map(l => `+ ${l}`).join('\n')}`,
+            inlineClassName: 'diff-added-block',
           },
           overviewRuler: {
             color: '#a6e3a1',
@@ -116,9 +117,20 @@ export default function Editor({
       const style = document.createElement('style')
       style.id = styleId
       style.textContent = `
-        .diff-removed-line { background: rgba(243, 139, 168, 0.15) !important; border-left: 3px solid #f38ba8; }
-        .diff-added-preview { color: #a6e3a1; font-style: italic; opacity: 0.8; }
-        .diff-gutter-removed { background: #f38ba8; width: 3px !important; margin-left: 2px; }
+        .diff-removed-line { background: rgba(243, 139, 168, 0.25) !important; text-decoration: line-through; }
+        .diff-added-block { 
+          display: block;
+          background: rgba(166, 227, 161, 0.15) !important;
+          color: #a6e3a1; 
+          white-space: pre;
+          margin-top: 4px;
+          padding: 4px 8px;
+          border-left: 3px solid #a6e3a1;
+          font-family: inherit;
+          line-height: inherit;
+        }
+        .diff-gutter-removed { border-left: 3px solid #f38ba8; margin-left: 4px; }
+        .diff-margin-removed::before { content: '-'; color: #f38ba8; margin-left: 8px; font-weight: bold; }
       `
       document.head.appendChild(style)
     }

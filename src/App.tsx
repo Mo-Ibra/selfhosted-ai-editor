@@ -13,7 +13,22 @@ export default function App() {
   const [fileContents, setFileContents] = useState<Record<string, string>>({})
   const [pinnedFiles, setPinnedFiles] = useState<string[]>([])
 
-  // ─── AI State ────────────────────────────────────────────────────
+  // ─── File Watcher Setup ──────────────────────────────────────────
+  useEffect(() => {
+    if (!folderPath) return
+
+    const handleFsChange = () => {
+      // Refresh tree
+      window.electronAPI.readTree(folderPath).then(setFileTree)
+    }
+
+    window.electronAPI.onFsChanged(handleFsChange)
+    return () => {
+      window.electronAPI.removeAllListeners('fs:changed')
+    }
+  }, [folderPath])
+
+  // ─── Handle AI Chat ──────────────────────────────────────────────
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [pendingEdits, setPendingEdits] = useState<AIEdit[]>([])

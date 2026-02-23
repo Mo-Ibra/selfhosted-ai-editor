@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
 import http from 'node:http'
+import chokidar, { FSWatcher } from 'chokidar'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -45,6 +46,8 @@ function createWindow() {
 
 // ─── File System IPC ───────────────────────────────────────────────
 
+let watcher: FSWatcher | null = null
+
 // Open folder dialog
 ipcMain.handle('fs:openFolder', async () => {
   if (!win) return null
@@ -52,7 +55,30 @@ ipcMain.handle('fs:openFolder', async () => {
     properties: ['openDirectory'],
     title: 'Open Project Folder',
   })
-  return result.canceled ? null : result.filePaths[0]
+
+  if (!result.canceled && result.filePaths[0]) {
+    const folderPath = result.filePaths[0]
+
+    // Setup file watcher
+    if (watcher) {
+      await watcher.close()
+    }
+
+    watcher = chokidar.watch(folderPath, {
+      ignored: Array.from(IGNORED),
+      persistent: true,
+      ignoreInitial: true,
+      depth: 6,
+    })
+
+    watcher.on('all', (event: string, path: string) => {
+      win?.webContents.send('fs:changed', { event, path })
+    })
+
+    return folderPath
+  }
+
+  return null
 })
 
 // IGNORED paths for file tree

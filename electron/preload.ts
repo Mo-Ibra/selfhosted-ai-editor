@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onChatDone: (callback: (response: object | null) => void) => {
     ipcRenderer.on('ai:done', (_event, response) => callback(response))
   },
+  onFsChanged: (callback: (payload: { event: string; path: string }) => void) => {
+    ipcRenderer.on('fs:changed', (_event, payload) => callback(payload))
+  },
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel)
   },

@@ -43,6 +43,7 @@ export interface ElectronAPI {
   chat: (payload: OllamaPayload) => Promise<void>
   onChatChunk: (callback: (chunk: string) => void) => void
   onChatDone: (callback: (response: AIResponse | null) => void) => void
+  onFsChanged: (callback: (payload: { event: string; path: string }) => void) => void
   removeAllListeners: (channel: string) => void
   windowClose: () => void
   windowMinimize: () => void
