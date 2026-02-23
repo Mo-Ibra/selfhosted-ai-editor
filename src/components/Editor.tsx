@@ -12,6 +12,7 @@ interface EditorProps {
   onRejectEdit: (edit: AIEdit) => void
   onAcceptAll: () => void
   onRejectAll: () => void
+  onSave: () => void
 }
 
 function getLanguage(filePath: string | null): string {
@@ -37,6 +38,7 @@ export default function Editor({
   onRejectEdit,
   onAcceptAll,
   onRejectAll,
+  onSave,
 }: EditorProps) {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const decorationsRef = useRef<string[]>([])
@@ -44,6 +46,11 @@ export default function Editor({
 
   const handleMount: OnMount = (editor) => {
     editorRef.current = editor
+
+    // Add Save Command (Ctrl/Cmd + S)
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      onSave()
+    })
   }
 
   // Apply diff decorations when pendingEdits change

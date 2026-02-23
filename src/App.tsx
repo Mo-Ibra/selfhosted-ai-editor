@@ -12,6 +12,7 @@ export default function App() {
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null)
   const [fileContents, setFileContents] = useState<Record<string, string>>({})
   const [pinnedFiles, setPinnedFiles] = useState<string[]>([])
+  const [dirtyFiles, setDirtyFiles] = useState<Set<string>>(new Set())
 
   // ─── File Watcher Setup ──────────────────────────────────────────
   useEffect(() => {
@@ -53,6 +54,7 @@ export default function App() {
     setMessages([])
     setAcceptedEdits([])
     setRejectedEdits([])
+    setDirtyFiles(new Set())
   }, [])
 
   // ─── File Click ──────────────────────────────────────────────────
@@ -77,7 +79,26 @@ export default function App() {
   const handleContentChange = useCallback((content: string) => {
     if (!activeFilePath) return
     setFileContents((prev) => ({ ...prev, [activeFilePath]: content }))
+    setDirtyFiles((prev) => {
+      const next = new Set(prev)
+      next.add(activeFilePath)
+      return next
+    })
   }, [activeFilePath])
+
+  // ─── Save File ───────────────────────────────────────────────────
+  const handleSave = useCallback(async () => {
+    if (!activeFilePath) return
+    const content = fileContents[activeFilePath]
+    if (content === undefined) return
+
+    await window.electronAPI.writeFile(activeFilePath, content)
+    setDirtyFiles((prev) => {
+      const next = new Set(prev)
+      next.delete(activeFilePath)
+      return next
+    })
+  }, [activeFilePath, fileContents])
 
   // ─── AI Streaming Setup ──────────────────────────────────────────
   useEffect(() => {
@@ -272,26 +293,33 @@ export default function App() {
     <div className="app">
       {/* Title Bar */}
       <div className="titlebar">
-        <div className="titlebar-traffic">
-          <button
-            className="titlebar-btn close"
-            onClick={() => window.electronAPI.windowClose()}
-          />
-          <button
-            className="titlebar-btn minimize"
-            onClick={() => window.electronAPI.windowMinimize()}
-          />
-          <button
-            className="titlebar-btn maximize"
-            onClick={() => window.electronAPI.windowMaximize()}
-          />
-        </div>
-        <div className="titlebar-title">
-          AI Editor {activeFileName ? `— ${activeFileName}` : ''}
-        </div>
         {folderName && (
           <div className="titlebar-folder">📁 {folderName}</div>
         )}
+        <div className="titlebar-title">
+          AI Editor {activeFileName ? `— ${activeFileName}` : ''}
+        </div>
+
+        <div className="titlebar-controls">
+          <button
+            className="control-btn minimize"
+            onClick={() => window.electronAPI.windowMinimize()}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 5h10v1H0z" fill="currentColor" /></svg>
+          </button>
+          <button
+            className="control-btn maximize"
+            onClick={() => window.electronAPI.windowMaximize()}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0h10v10H0V0zm1 1v8h8V1H1z" fill="currentColor" /></svg>
+          </button>
+          <button
+            className="control-btn close"
+            onClick={() => window.electronAPI.windowClose()}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" stroke="currentColor" strokeWidth="1.2" /></svg>
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -319,7 +347,7 @@ export default function App() {
             {/* Tabs */}
             <div className="editor-tabs">
               {activeFilePath && (
-                <div className="editor-tab active">
+                <div className={`editor-tab active ${dirtyFiles.has(activeFilePath) ? 'dirty' : ''}`}>
                   {activeFileName}
                   <button
                     className="tab-close-btn"
@@ -328,7 +356,7 @@ export default function App() {
                       setActiveFilePath(null);
                     }}
                   >
-                    ×
+                    {dirtyFiles.has(activeFilePath) ? '●' : '×'}
                   </button>
                 </div>
               )}
@@ -343,6 +371,7 @@ export default function App() {
               onRejectEdit={handleRejectEdit}
               onAcceptAll={handleAcceptAll}
               onRejectAll={handleRejectAll}
+              onSave={handleSave}
             />
           </div>
 
