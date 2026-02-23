@@ -9,6 +9,7 @@ interface AIChatProps {
   onRejectEdit: (edit: AIEdit) => void
   acceptedEdits: string[]
   rejectedEdits: string[]
+  aiModel: string
 }
 
 export default function AIChat({
@@ -19,6 +20,7 @@ export default function AIChat({
   onRejectEdit,
   acceptedEdits,
   rejectedEdits,
+  aiModel,
 }: AIChatProps) {
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -57,7 +59,7 @@ export default function AIChat({
       <div className="chat-header">
         <span>🤖</span>
         <h3>AI Assistant</h3>
-        <span className="chat-model-badge">qwen3-coder</span>
+        <span className="chat-model-badge">{aiModel ? aiModel.split(':')[0] : 'assistant'}</span>
       </div>
 
       <div className="chat-messages">

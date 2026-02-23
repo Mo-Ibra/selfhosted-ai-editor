@@ -187,6 +187,46 @@ body,
   border-color: var(--accent);
 }
 
+.explorer-action:hover {
+  background: var(--bg-hover);
+}
+
+.model-selector-box {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.model-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.model-input {
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.model-input:focus {
+  border-color: var(--border-light);
+}
+
+.explorer-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
 .explorer-body {
   flex: 1;
   overflow-y: auto;

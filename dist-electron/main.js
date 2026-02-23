@@ -1857,7 +1857,7 @@ function buildFileTreeString(nodes, indent = "") {
   return result;
 }
 ipcMain.handle("ai:chat", async (event, payload) => {
-  const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, history } = payload;
+  const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, history, model } = payload;
   const fileTreeStr = buildFileTreeString(fileTreeNodes);
   let pinnedContext = "";
   for (const pf of pinnedFiles) {
@@ -1900,7 +1900,7 @@ IMPORTANT RULES:
 - The "file" field should be the FULL absolute path to the file if it exists, otherwise a relative path from the project root.
 - Make minimal, precise edits. Only change what is necessary.`;
   const requestBody = JSON.stringify({
-    model: "qwen3-coder:480b-cloud",
+    model: model || "qwen3-coder:480b-cloud",
     messages: [
       { role: "system", content: systemPrompt },
       ...history

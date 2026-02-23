@@ -88,6 +88,17 @@ function FileItem({
   )
 }
 
+interface FileExplorerProps {
+  tree: FileNode[]
+  activeFile: string | null
+  pinnedFiles: string[]
+  onFileClick: (path: string) => void
+  onPinToggle: (path: string) => void
+  onOpenFolder: () => void
+  aiModel: string
+  onModelChange: (model: string) => void
+}
+
 export default function FileExplorer({
   tree,
   activeFile,
@@ -95,12 +106,20 @@ export default function FileExplorer({
   onFileClick,
   onPinToggle,
   onOpenFolder,
+  aiModel,
+  onModelChange,
 }: FileExplorerProps) {
-  const pinnedNodes = tree
-    .flatMap(function flatten(n: FileNode): FileNode[] {
-      return n.isDir ? [n, ...(n.children ?? []).flatMap(flatten)] : [n]
-    })
-    .filter((n) => pinnedFiles.includes(n.path))
+  // Find nodes for pinned files to reuse FileItem
+  const findNodeByPath = (nodes: FileNode[], path: string): FileNode | null => {
+    for (const node of nodes) {
+      if (node.path === path) return node
+      if (node.children) {
+        const found = findNodeByPath(node.children, path)
+        if (found) return found
+      }
+    }
+    return null
+  }
 
   return (
     <aside className="explorer">
@@ -111,25 +130,43 @@ export default function FileExplorer({
         </button>
       </div>
 
+      <div className="model-selector-box">
+        <label className="model-label">OLLAMA MODEL</label>
+        <input
+          className="model-input"
+          value={aiModel}
+          onChange={(e) => onModelChange(e.target.value)}
+          placeholder="e.g. qwen:7b"
+          spellCheck={false}
+        />
+      </div>
+
       <div className="explorer-body">
-        {pinnedNodes.length > 0 && (
+        {pinnedFiles.length > 0 && (
           <>
             <div className="explorer-section-label">📌 Pinned</div>
-            {pinnedNodes.map((node) => (
-              <FileItem
-                key={`pinned-${node.path}`}
-                node={node}
-                depth={0}
-                activeFile={activeFile}
-                pinnedFiles={pinnedFiles}
-                onFileClick={onFileClick}
-                onPinToggle={onPinToggle}
-              />
-            ))}
-            <div className="explorer-section-label" style={{ marginTop: 8 }}>Files</div>
+            {pinnedFiles.map((path) => {
+              const node = findNodeByPath(tree, path) || {
+                name: path.split(/[\\/]/).pop() || path,
+                path: path,
+                isDir: false
+              }
+              return (
+                <FileItem
+                  key={`pinned-${path}`}
+                  node={node}
+                  depth={0}
+                  activeFile={activeFile}
+                  pinnedFiles={pinnedFiles}
+                  onFileClick={onFileClick}
+                  onPinToggle={onPinToggle}
+                />
+              )
+            })}
           </>
         )}
 
+        <div className="explorer-section-label" style={{ marginTop: 12 }}>PROJECT</div>
         {tree.map((node) => (
           <FileItem
             key={node.path}

@@ -15,6 +15,11 @@ export default function App() {
   const [pinnedFiles, setPinnedFiles] = useState<string[]>([])
   const [dirtyFiles, setDirtyFiles] = useState<Set<string>>(new Set())
   const [showTerminal, setShowTerminal] = useState(false)
+  const [aiModel, setAiModel] = useState(() => localStorage.getItem('ai-model') || 'qwen3-coder:480b-cloud')
+
+  useEffect(() => {
+    localStorage.setItem('ai-model', aiModel)
+  }, [aiModel])
 
   // ─── File Watcher Setup ──────────────────────────────────────────
   useEffect(() => {
@@ -202,22 +207,18 @@ export default function App() {
     // Build relative file tree for prompt
     const activeContent = activeFilePath ? (fileContents[activeFilePath] ?? '') : ''
 
-    const chatHistory = messages.map(m => ({
-      role: m.role,
-      content: m.content
-    }))
-
-    // Add current user message to history
-    chatHistory.push({ role: 'user', content: text })
-
     await window.electronAPI.chat({
       activeFile: activeContent,
-      activeFilePath: activeFilePath ?? '',
+      activeFilePath: activeFilePath || '',
       fileTreeNodes: fileTree,
       pinnedFiles: pinnedFileContents,
-      history: chatHistory,
+      history: [...messages, userMsg].map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      model: aiModel,
     })
-  }, [folderPath, fileTree, activeFilePath, fileContents, pinnedFiles, messages])
+  }, [folderPath, fileTree, activeFilePath, fileContents, pinnedFiles, messages, aiModel])
 
   // ─── Apply Edit to File Content ──────────────────────────────────
   const applyEdit = useCallback((edit: AIEdit): string | null => {
@@ -354,6 +355,8 @@ export default function App() {
             onFileClick={handleFileClick}
             onPinToggle={handlePinToggle}
             onOpenFolder={handleOpenFolder}
+            aiModel={aiModel}
+            onModelChange={setAiModel}
           />
 
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -403,6 +406,7 @@ export default function App() {
             onRejectEdit={handleRejectEdit}
             acceptedEdits={acceptedEdits}
             rejectedEdits={rejectedEdits}
+            aiModel={aiModel}
           />
         </div>
       )}

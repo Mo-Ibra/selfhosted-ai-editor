@@ -33,6 +33,7 @@ export interface OllamaPayload {
   fileTreeNodes: FileNode[]
   pinnedFiles: { path: string; content: string }[]
   history: { role: 'user' | 'assistant'; content: string }[]
+  model: string
 }
 
 export interface ElectronAPI {

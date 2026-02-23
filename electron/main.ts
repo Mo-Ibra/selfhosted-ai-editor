@@ -6,6 +6,7 @@ import http from 'node:http'
 import os from 'node:os'
 import chokidar, { FSWatcher } from 'chokidar'
 import { createRequire } from 'node:module'
+
 const require = createRequire(import.meta.url)
 const pty = require('node-pty')
 import type { IPty } from 'node-pty'
@@ -176,8 +177,9 @@ ipcMain.handle('ai:chat', async (event, payload: {
   fileTreeNodes: FileNode[]
   pinnedFiles: { path: string; content: string }[]
   history: { role: 'user' | 'assistant'; content: string }[]
+  model: string
 }) => {
-  const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, history } = payload
+  const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, history, model } = payload
   const fileTreeStr = buildFileTreeString(fileTreeNodes)
 
   let pinnedContext = ''
@@ -218,7 +220,7 @@ IMPORTANT RULES:
 - Make minimal, precise edits. Only change what is necessary.`
 
   const requestBody = JSON.stringify({
-    model: 'qwen3-coder:480b-cloud',
+    model: model || 'qwen3-coder:480b-cloud',
     messages: [
       { role: 'system', content: systemPrompt },
       ...history,
