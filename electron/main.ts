@@ -1,11 +1,9 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron'
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
 import http from 'node:http'
 
-const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -142,9 +140,9 @@ ipcMain.handle('ai:chat', async (event, payload: {
   activeFilePath: string
   fileTreeNodes: FileNode[]
   pinnedFiles: { path: string; content: string }[]
-  message: string
+  history: { role: 'user' | 'assistant'; content: string }[]
 }) => {
-  const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, message } = payload
+  const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, history } = payload
   const fileTreeStr = buildFileTreeString(fileTreeNodes)
 
   let pinnedContext = ''
@@ -187,7 +185,7 @@ IMPORTANT RULES:
     model: 'qwen3-coder:480b-cloud',
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: message },
+      ...history,
     ],
     stream: true,
   })

@@ -1,10 +1,8 @@
 import { ipcMain, app, BrowserWindow, dialog } from "electron";
-import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
 import http from "node:http";
-createRequire(import.meta.url);
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -114,7 +112,7 @@ function buildFileTreeString(nodes, indent = "") {
   return result;
 }
 ipcMain.handle("ai:chat", async (event, payload) => {
-  const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, message } = payload;
+  const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, history } = payload;
   const fileTreeStr = buildFileTreeString(fileTreeNodes);
   let pinnedContext = "";
   for (const pf of pinnedFiles) {
@@ -159,7 +157,7 @@ IMPORTANT RULES:
     model: "qwen3-coder:480b-cloud",
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: message }
+      ...history
     ],
     stream: true
   });

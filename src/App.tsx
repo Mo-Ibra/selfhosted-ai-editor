@@ -153,12 +153,20 @@ export default function App() {
     // Build relative file tree for prompt
     const activeContent = activeFilePath ? (fileContents[activeFilePath] ?? '') : ''
 
+    const chatHistory = messages.map(m => ({
+      role: m.role,
+      content: m.content
+    }))
+
+    // Add current user message to history
+    chatHistory.push({ role: 'user', content: text })
+
     await window.electronAPI.chat({
       activeFile: activeContent,
       activeFilePath: activeFilePath ?? '',
       fileTreeNodes: fileTree,
       pinnedFiles: pinnedFileContents,
-      message: text,
+      history: chatHistory,
     })
   }, [folderPath, fileTree, activeFilePath, fileContents, pinnedFiles])
 
