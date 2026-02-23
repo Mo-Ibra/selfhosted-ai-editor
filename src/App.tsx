@@ -381,6 +381,7 @@ export default function App() {
             <Editor
               content={activeContent}
               filePath={activeFilePath}
+              fileContents={fileContents}
               pendingEdits={pendingEdits}
               onContentChange={handleContentChange}
               onAcceptEdit={handleAcceptEdit}

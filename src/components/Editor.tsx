@@ -1,11 +1,11 @@
 import { useRef, useEffect, useState } from 'react'
-import MonacoEditor, { OnMount } from '@monaco-editor/react'
-import * as monaco from 'monaco-editor'
+import MonacoEditor, { OnMount, Monaco } from '@monaco-editor/react'
 import { AIEdit } from '../types'
 
 interface EditorProps {
   content: string
   filePath: string | null
+  fileContents: Record<string, string>
   pendingEdits: AIEdit[]
   onContentChange: (content: string) => void
   onAcceptEdit: (edit: AIEdit) => void
@@ -32,6 +32,7 @@ function getLanguage(filePath: string | null): string {
 export default function Editor({
   content,
   filePath,
+  fileContents,
   pendingEdits,
   onContentChange,
   onAcceptEdit,
@@ -40,12 +41,85 @@ export default function Editor({
   onRejectAll,
   onSave,
 }: EditorProps) {
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
+  const editorRef = useRef<any>(null)
+  const monacoRef = useRef<Monaco | null>(null)
   const decorationsRef = useRef<string[]>([])
+  const extraLibsRef = useRef<any[]>([])
   const [currentEditIndex, setCurrentEditIndex] = useState(0)
 
-  const handleMount: OnMount = (editor) => {
+  // ─── Setup Monaco & Standard Libs ───────────────────────────────
+  const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
+    monacoRef.current = monaco
+
+    // ─── Configure TypeScript/JSX ───────────────────────────────────
+    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+      target: monaco.languages.typescript.ScriptTarget.ESNext,
+      allowNonTsExtensions: true,
+      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+      module: monaco.languages.typescript.ModuleKind.ESNext,
+      noEmit: true,
+      jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
+      allowJs: true,
+      typeRoots: ['node_modules/@types']
+    })
+
+    // ─── Inject Standard Type Definitions ───────────────────────────
+    const standardLibs = [
+      {
+        filePath: 'electron.d.ts',
+        content: `declare module 'electron' {
+          export const app: any;
+          export const BrowserWindow: any;
+          export const ipcMain: any;
+          export const dialog: any;
+          export const shell: any;
+        }`
+      },
+      {
+        filePath: 'node-env.d.ts',
+        content: `
+          declare module 'node:fs' { export * from 'fs'; }
+          declare module 'fs' {
+            export function readFileSync(path: string, options?: any): string;
+            export function writeFileSync(path: string, data: string, options?: any): void;
+            export function existsSync(path: string): boolean;
+            export function mkdirSync(path: string, options?: any): void;
+            export function readdirSync(path: string, options?: any): any[];
+          }
+          declare module 'node:path' { export * from 'path'; }
+          declare module 'path' {
+            export function join(...paths: string[]): string;
+            export function dirname(p: string): string;
+            export function basename(p: string): string;
+            export function extname(p: string): string;
+            export function resolve(...paths: string[]): string;
+          }
+          declare module 'node:url' {
+            export function fileURLToPath(url: string | URL): string;
+            export function pathToFileURL(path: string): URL;
+          }
+          declare module 'node:module' {
+            export function createRequire(path: string | URL): any;
+          }
+        `
+      },
+      {
+        filePath: 'react-env.d.ts',
+        content: `declare module 'react' {
+          export const useState: any;
+          export const useEffect: any;
+          export const useRef: any;
+          export const useCallback: any;
+          export const useMemo: any;
+          export default { useState, useEffect, useRef, useCallback, useMemo };
+        }`
+      }
+    ]
+
+    standardLibs.forEach(lib => {
+      monaco.languages.typescript.typescriptDefaults.addExtraLib(lib.content, `file:///${lib.filePath}`)
+    })
 
     // Add Save Command (Ctrl/Cmd + S)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
@@ -53,31 +127,52 @@ export default function Editor({
     })
   }
 
-  // Apply diff decorations when pendingEdits change
+  // ─── Project File Awareness ──────────────────────────────────────
+  useEffect(() => {
+    if (!monacoRef.current) return
+    const monaco = monacoRef.current
+
+    // Clear old project libs
+    extraLibsRef.current.forEach(lib => lib.dispose())
+    extraLibsRef.current = []
+
+    // Inject all loaded project files as extra libs
+    Object.entries(fileContents).forEach(([path, content]) => {
+      // Don't add the active file as an extra lib if it's already a model
+      // But add others for cross-file resolution
+      try {
+        const lib = monaco.languages.typescript.typescriptDefaults.addExtraLib(
+          content,
+          `file:///${path.replace(/\\/g, '/')}`
+        )
+        extraLibsRef.current.push(lib)
+      } catch (e) {
+        console.warn('Failed to add extra lib for', path, e)
+      }
+    })
+  }, [fileContents])
+
+  // ─── Diff Decorations ────────────────────────────────────────────
   useEffect(() => {
     const editor = editorRef.current
-    if (!editor) return
+    const monaco = monacoRef.current
+    if (!editor || !monaco) return
 
-    // Clear old decorations
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, [])
-
     if (pendingEdits.length === 0) return
 
-    // Only show the active file's edits
     const fileEdits = pendingEdits.filter(
-      (e) => e.file === filePath || filePath?.endsWith(e.file)
+      (e) => e.file === filePath || filePath?.endsWith(e.file.replace(/\//g, '\\'))
     )
 
     if (fileEdits.length === 0) return
 
-    const newDecorations: monaco.editor.IModelDeltaDecoration[] = []
+    const newDecorations: any[] = []
 
     for (const edit of fileEdits) {
-      const oldLines = edit.oldContent?.split('\n') ?? []
       const newLines = edit.newContent.split('\n')
 
-      // Highlight old lines (red - to be removed)
-      if (edit.oldContent && oldLines.length > 0) {
+      if (edit.oldContent) {
         newDecorations.push({
           range: new monaco.Range(edit.startLine, 1, edit.endLine, 1000),
           options: {
@@ -88,12 +183,10 @@ export default function Editor({
               color: '#f38ba8',
               position: monaco.editor.OverviewRulerLane.Left,
             },
-            marginClassName: 'diff-margin-removed',
           },
         })
       }
 
-      // Show new lines as a block after the target range
       const endLine = edit.endLine
       newDecorations.push({
         range: new monaco.Range(endLine, 1, endLine, 1000),
@@ -112,32 +205,29 @@ export default function Editor({
     }
 
     decorationsRef.current = editor.deltaDecorations([], newDecorations)
-
-    // Scroll to first edit
     if (fileEdits.length > 0) {
       editor.revealLineInCenter(fileEdits[0].startLine)
     }
 
-    // Inject diff CSS into Monaco
+    // Inject styles
     const styleId = 'monaco-diff-styles'
     if (!document.getElementById(styleId)) {
       const style = document.createElement('style')
       style.id = styleId
       style.textContent = `
-        .diff-removed-line { background: rgba(243, 139, 168, 0.25) !important; text-decoration: line-through; }
+        .diff-removed-line { background: rgba(243, 139, 168, 0.15) !important; text-decoration: line-through; opacity: 0.8; }
         .diff-added-block { 
           display: block;
-          background: rgba(166, 227, 161, 0.15) !important;
+          background: rgba(166, 227, 161, 0.1) !important;
           color: #a6e3a1; 
           white-space: pre;
-          margin-top: 4px;
-          padding: 4px 8px;
-          border-left: 3px solid #a6e3a1;
+          margin-top: 2px;
+          padding: 2px 8px;
+          border-left: 2px solid #a6e3a1;
           font-family: inherit;
-          line-height: inherit;
+          font-size: 0.95em;
         }
-        .diff-gutter-removed { border-left: 3px solid #f38ba8; margin-left: 4px; }
-        .diff-margin-removed::before { content: '-'; color: #f38ba8; margin-left: 8px; font-weight: bold; }
+        .diff-gutter-removed { border-left: 2px solid #f38ba8; }
       `
       document.head.appendChild(style)
     }
@@ -145,7 +235,7 @@ export default function Editor({
 
   const currentEdit = pendingEdits[currentEditIndex]
   const hasEditsForCurrentFile = pendingEdits.some(
-    (e) => e.file === filePath || filePath?.endsWith(e.file)
+    (e) => e.file === filePath || filePath?.endsWith(e.file.replace(/\//g, '\\'))
   )
 
   return (
@@ -176,40 +266,20 @@ export default function Editor({
                 formatOnPaste: true,
                 tabSize: 2,
                 wordWrap: 'off',
+                automaticLayout: true,
               }}
             />
 
-            {hasEditsForCurrentFile && pendingEdits.length > 0 && (
+            {hasEditsForCurrentFile && (
               <div className="diff-actions">
                 <span className="diff-actions-label">
                   🔀 {pendingEdits.length} proposed edit{pendingEdits.length > 1 ? 's' : ''}
                 </span>
-                {pendingEdits.length > 1 && (
-                  <>
-                    <button className="btn-accept-all" onClick={onAcceptAll}>
-                      ✓ Accept All
-                    </button>
-                    <button className="btn-reject-all" onClick={onRejectAll}>
-                      ✗ Reject All
-                    </button>
-                  </>
-                )}
-                {currentEdit && (
-                  <>
-                    <button className="btn-accept" onClick={() => {
-                      onAcceptEdit(currentEdit)
-                      setCurrentEditIndex((i) => Math.max(0, i - 1))
-                    }}>
-                      ✓ Accept
-                    </button>
-                    <button className="btn-reject" onClick={() => {
-                      onRejectEdit(currentEdit)
-                      setCurrentEditIndex((i) => Math.max(0, i - 1))
-                    }}>
-                      ✗ Reject
-                    </button>
-                  </>
-                )}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="btn-accept" onClick={() => onAcceptEdit(currentEdit || pendingEdits[0])}>✓ Accept</button>
+                  <button className="btn-reject" onClick={() => onRejectEdit(currentEdit || pendingEdits[0])}>✗ Reject</button>
+                  <button className="btn-primary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={onAcceptAll}>Accept All</button>
+                </div>
               </div>
             )}
           </>
