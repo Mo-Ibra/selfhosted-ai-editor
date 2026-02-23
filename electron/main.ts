@@ -112,6 +112,10 @@ ipcMain.handle('fs:readFile', async (_event, filePath: string) => {
 })
 
 ipcMain.handle('fs:writeFile', async (_event, filePath: string, content: string) => {
+  const dir = path.dirname(filePath)
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
+  }
   fs.writeFileSync(filePath, content, 'utf-8')
 })
 
@@ -175,10 +179,11 @@ IMPORTANT RULES:
     }
   ]
 }
+- TO CREATE A NEW FILE: Use the relative path of the new file. Set startLine: 0 and endLine: 0. The context provided should be empty.
 - When answering questions, explaining concepts, or having a conversation (NOT making edits), respond in plain text.
 - Line numbers are 1-indexed.
 - For insertions, set startLine and endLine to the same line (the line to insert after).
-- The "file" field should be the FULL absolute path to the file.
+- The "file" field should be the FULL absolute path to the file if it exists, otherwise a relative path from the project root.
 - Make minimal, precise edits. Only change what is necessary.`
 
   const requestBody = JSON.stringify({

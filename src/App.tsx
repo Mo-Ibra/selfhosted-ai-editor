@@ -168,15 +168,18 @@ export default function App() {
       pinnedFiles: pinnedFileContents,
       history: chatHistory,
     })
-  }, [folderPath, fileTree, activeFilePath, fileContents, pinnedFiles])
+  }, [folderPath, fileTree, activeFilePath, fileContents, pinnedFiles, messages])
 
   // ─── Apply Edit to File Content ──────────────────────────────────
   const applyEdit = useCallback((edit: AIEdit): string | null => {
+    const isNewFile = edit.startLine === 0 && edit.endLine === 0
+
     // Find the file — match by full path or partial
     const targetPath = Object.keys(fileContents).find(
       (p) => p === edit.file || p.endsWith(edit.file.replace(/\//g, '\\'))
     ) ?? activeFilePath
 
+    if (isNewFile) return edit.newContent
     if (!targetPath) return null
 
     const content = fileContents[targetPath] ?? ''
@@ -184,26 +187,44 @@ export default function App() {
     const start = edit.startLine - 1
     const end = edit.endLine - 1
     const newLines = edit.newContent.split('\n')
-    lines.splice(start, end - start + 1, ...newLines)
+    lines.splice(start, Math.max(0, end - start + 1), ...newLines)
     return lines.join('\n')
   }, [fileContents, activeFilePath])
 
   // ─── Accept Edit ─────────────────────────────────────────────────
   const handleAcceptEdit = useCallback(async (edit: AIEdit) => {
     const newContent = applyEdit(edit)
-    if (!newContent) return
+    if (newContent === null) return
 
-    const targetPath = Object.keys(fileContents).find(
+    let targetPath = Object.keys(fileContents).find(
       (p) => p === edit.file || p.endsWith(edit.file.replace(/\//g, '\\'))
-    ) ?? activeFilePath
+    ) ?? (activeFilePath && (activeFilePath === edit.file || activeFilePath.endsWith(edit.file.replace(/\//g, '\\'))) ? activeFilePath : null)
+
+    // If still not found, it might be a new file with a relative path
+    if (!targetPath && folderPath) {
+      // Check if it's already an absolute path
+      if (edit.file.includes(':') || edit.file.startsWith('/') || edit.file.startsWith('\\')) {
+        targetPath = edit.file
+      } else {
+        // Assume relative to folderPath
+        targetPath = `${folderPath}\\${edit.file.replace(/\//g, '\\')}`
+      }
+    }
 
     if (!targetPath) return
 
-    setFileContents((prev) => ({ ...prev, [targetPath]: newContent }))
+    setFileContents((prev) => ({ ...prev, [targetPath!]: newContent }))
     await window.electronAPI.writeFile(targetPath, newContent)
+
+    // Refresh tree if it was a new file
+    if (folderPath) {
+      const tree = await window.electronAPI.readTree(folderPath)
+      setFileTree(tree)
+    }
+
     setAcceptedEdits((prev) => [...prev, edit.id])
     setPendingEdits((prev) => prev.filter((e) => e.id !== edit.id))
-  }, [applyEdit, fileContents, activeFilePath])
+  }, [applyEdit, fileContents, activeFilePath, folderPath])
 
   // ─── Reject Edit ─────────────────────────────────────────────────
   const handleRejectEdit = useCallback((edit: AIEdit) => {
