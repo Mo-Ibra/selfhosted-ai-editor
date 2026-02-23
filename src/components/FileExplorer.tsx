@@ -25,7 +25,7 @@ function FileItem({
   onFileClick: (path: string) => void
   onPinToggle: (path: string) => void
 }) {
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
   const isPinned = pinnedFiles.includes(node.path)
   const isActive = activeFile === node.path
 
@@ -46,25 +46,29 @@ function FileItem({
     return (
       <div>
         <div
-          className="file-tree-item"
-          style={{ paddingLeft: `${8 + depth * 12}px` }}
+          className="file-tree-item directory"
+          style={{ paddingLeft: `${8 + depth * 18}px` }}
           onClick={() => setIsOpen(!isOpen)}
         >
           <span className={`file-tree-chevron ${isOpen ? 'open' : ''}`}>▶</span>
           <span className="file-tree-icon">📁</span>
           <span className="file-tree-name">{node.name}</span>
         </div>
-        {isOpen && node.children?.map((child) => (
-          <FileItem
-            key={child.path}
-            node={child}
-            depth={depth + 1}
-            activeFile={activeFile}
-            pinnedFiles={pinnedFiles}
-            onFileClick={onFileClick}
-            onPinToggle={onPinToggle}
-          />
-        ))}
+        {isOpen && (
+          <div className="file-tree-children">
+            {node.children?.map((child) => (
+              <FileItem
+                key={child.path}
+                node={child}
+                depth={depth + 1}
+                activeFile={activeFile}
+                pinnedFiles={pinnedFiles}
+                onFileClick={onFileClick}
+                onPinToggle={onPinToggle}
+              />
+            ))}
+          </div>
+        )}
       </div>
     )
   }
@@ -72,7 +76,7 @@ function FileItem({
   return (
     <div
       className={`file-tree-item ${isActive ? 'active' : ''} ${isPinned ? 'pinned' : ''}`}
-      style={{ paddingLeft: `${8 + depth * 12}px` }}
+      style={{ paddingLeft: `${8 + depth * 18}px` }}
       onClick={() => onFileClick(node.path)}
     >
       <span className="file-tree-icon">{getFileIcon(node.name, false)}</span>

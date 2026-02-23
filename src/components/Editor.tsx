@@ -61,6 +61,11 @@ export default function Editor({
       noEmit: true,
       jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
       allowJs: true,
+      esModuleInterop: true,
+      baseUrl: 'file:///',
+      paths: {
+        '@/*': ['src/*']
+      },
       typeRoots: ['node_modules/@types']
     })
 
@@ -113,7 +118,13 @@ export default function Editor({
           export const useCallback: any;
           export const useMemo: any;
           export default { useState, useEffect, useRef, useCallback, useMemo };
-        }`
+        }
+        declare module 'react/jsx-runtime' {
+          export const jsx: any;
+          export const jsxs: any;
+          export const Fragment: any;
+        }
+        `
       }
     ]
 
@@ -245,6 +256,7 @@ export default function Editor({
           <>
             <MonacoEditor
               height="100%"
+              path={filePath?.replace(/\\/g, '/')}
               value={content}
               language={getLanguage(filePath)}
               theme="vs-dark"
