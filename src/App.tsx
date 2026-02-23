@@ -277,6 +277,15 @@ export default function App() {
               {activeFilePath && (
                 <div className="editor-tab active">
                   {activeFileName}
+                  <button
+                    className="tab-close-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveFilePath(null);
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
               )}
             </div>

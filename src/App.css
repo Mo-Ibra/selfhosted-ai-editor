@@ -1,5 +1,11 @@
 /* ─── Global Reset & Tokens ─────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 :root {
   --bg-base: #1e1e2e;
@@ -35,14 +41,16 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 
-  --shadow: 0 4px 24px rgba(0,0,0,0.4);
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
 
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   width: 100%;
   overflow: hidden;
@@ -87,10 +95,22 @@ html, body, #root {
   cursor: pointer;
   transition: opacity 0.15s;
 }
-.titlebar-btn:hover { opacity: 0.8; }
-.titlebar-btn.close { background: #ff5f57; }
-.titlebar-btn.minimize { background: #febc2e; }
-.titlebar-btn.maximize { background: #28c840; }
+
+.titlebar-btn:hover {
+  opacity: 0.8;
+}
+
+.titlebar-btn.close {
+  background: #ff5f57;
+}
+
+.titlebar-btn.minimize {
+  background: #febc2e;
+}
+
+.titlebar-btn.maximize {
+  background: #28c840;
+}
 
 .titlebar-title {
   flex: 1;
@@ -159,6 +179,7 @@ html, body, #root {
   align-items: center;
   gap: 6px;
 }
+
 .btn-open-folder:hover {
   background: rgba(137, 180, 250, 0.25);
   border-color: var(--accent);
@@ -170,9 +191,18 @@ html, body, #root {
   padding: 4px 0;
 }
 
-.explorer-body::-webkit-scrollbar { width: 4px; }
-.explorer-body::-webkit-scrollbar-track { background: transparent; }
-.explorer-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.explorer-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.explorer-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.explorer-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
 
 .explorer-section-label {
   padding: 8px 16px 4px;
@@ -194,14 +224,25 @@ html, body, #root {
   transition: background 0.1s;
   position: relative;
 }
-.file-tree-item:hover { background: var(--bg-hover); }
+
+.file-tree-item:hover {
+  background: var(--bg-hover);
+}
+
 .file-tree-item.active {
   background: var(--accent-dim);
   color: var(--accent);
 }
-.file-tree-item.pinned { color: var(--purple); }
 
-.file-tree-icon { font-size: 13px; flex-shrink: 0; }
+.file-tree-item.pinned {
+  color: var(--purple);
+}
+
+.file-tree-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
 .file-tree-chevron {
   font-size: 8px;
   color: var(--text-muted);
@@ -212,7 +253,11 @@ html, body, #root {
   transition: transform 0.2s ease;
   flex-shrink: 0;
 }
-.file-tree-chevron.open { transform: rotate(90deg); }
+
+.file-tree-chevron.open {
+  transform: rotate(90deg);
+}
+
 .file-tree-name {
   font-size: 13px;
   overflow: hidden;
@@ -232,9 +277,19 @@ html, body, #root {
   border-radius: 3px;
   transition: opacity 0.1s, color 0.1s;
 }
-.file-tree-item:hover .file-tree-pin-btn { opacity: 1; }
-.file-tree-pin-btn:hover { color: var(--purple); }
-.file-tree-pin-btn.pinned { opacity: 1; color: var(--purple); }
+
+.file-tree-item:hover .file-tree-pin-btn {
+  opacity: 1;
+}
+
+.file-tree-pin-btn:hover {
+  color: var(--purple);
+}
+
+.file-tree-pin-btn.pinned {
+  opacity: 1;
+  color: var(--purple);
+}
 
 /* ─── Editor Area ────────────────────────────────────────────────── */
 .editor-area {
@@ -256,7 +311,10 @@ html, body, #root {
   overflow-x: auto;
   overflow-y: hidden;
 }
-.editor-tabs::-webkit-scrollbar { height: 0; }
+
+.editor-tabs::-webkit-scrollbar {
+  height: 0;
+}
 
 .editor-tab {
   padding: 7px 16px;
@@ -269,12 +327,35 @@ html, body, #root {
   border-top: 2px solid transparent;
   transition: color 0.15s;
 }
+
 .editor-tab.active {
   background: var(--bg-base);
   color: var(--text-primary);
   border-top-color: var(--accent);
 }
-.editor-tab:hover:not(.active) { color: var(--text-primary); }
+
+.editor-tab:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+.tab-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  margin-left: 8px;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+  vertical-align: middle;
+}
+
+.tab-close-btn:hover {
+  background: var(--bg-active);
+  color: var(--red);
+}
 
 .editor-wrapper {
   flex: 1;
@@ -291,8 +372,15 @@ html, body, #root {
   gap: 16px;
   color: var(--text-muted);
 }
-.editor-empty-icon { font-size: 48px; opacity: 0.3; }
-.editor-empty p { font-size: 14px; }
+
+.editor-empty-icon {
+  font-size: 48px;
+  opacity: 0.3;
+}
+
+.editor-empty p {
+  font-size: 14px;
+}
 
 /* Diff overlay */
 .diff-overlay {
@@ -330,7 +418,10 @@ html, body, #root {
   font-weight: 500;
 }
 
-.btn-accept, .btn-reject, .btn-accept-all, .btn-reject-all {
+.btn-accept,
+.btn-reject,
+.btn-accept-all,
+.btn-reject-all {
   padding: 6px 14px;
   border-radius: var(--radius);
   border: none;
@@ -349,28 +440,40 @@ html, body, #root {
   color: var(--green);
   border: 1px solid rgba(166, 227, 161, 0.3);
 }
-.btn-accept:hover { background: rgba(166, 227, 161, 0.25); }
+
+.btn-accept:hover {
+  background: rgba(166, 227, 161, 0.25);
+}
 
 .btn-reject {
   background: var(--red-dim);
   color: var(--red);
   border: 1px solid rgba(243, 139, 168, 0.3);
 }
-.btn-reject:hover { background: rgba(243, 139, 168, 0.25); }
+
+.btn-reject:hover {
+  background: rgba(243, 139, 168, 0.25);
+}
 
 .btn-accept-all {
   background: var(--green-dim);
   color: var(--green);
   border: 1px solid rgba(166, 227, 161, 0.3);
 }
-.btn-accept-all:hover { background: rgba(166, 227, 161, 0.25); }
+
+.btn-accept-all:hover {
+  background: rgba(166, 227, 161, 0.25);
+}
 
 .btn-reject-all {
   background: var(--red-dim);
   color: var(--red);
   border: 1px solid rgba(243, 139, 168, 0.3);
 }
-.btn-reject-all:hover { background: rgba(243, 139, 168, 0.25); }
+
+.btn-reject-all:hover {
+  background: rgba(243, 139, 168, 0.25);
+}
 
 /* ─── AI Chat ────────────────────────────────────────────────────── */
 .chat-panel {
@@ -417,9 +520,18 @@ html, body, #root {
   gap: 12px;
 }
 
-.chat-messages::-webkit-scrollbar { width: 4px; }
-.chat-messages::-webkit-scrollbar-track { background: transparent; }
-.chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.chat-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
 
 .chat-message {
   display: flex;
@@ -433,8 +545,14 @@ html, body, #root {
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
-.chat-message.user .chat-message-role { color: var(--accent); }
-.chat-message.assistant .chat-message-role { color: var(--purple); }
+
+.chat-message.user .chat-message-role {
+  color: var(--accent);
+}
+
+.chat-message.assistant .chat-message-role {
+  color: var(--purple);
+}
 
 .chat-message-content {
   font-size: 13px;
@@ -460,13 +578,33 @@ html, body, #root {
   cursor: pointer;
   transition: background 0.1s;
 }
-.chat-edit-item:last-child { border-bottom: none; }
-.chat-edit-item:hover { background: var(--bg-hover); }
-.chat-edit-item.accepted { opacity: 0.5; }
-.chat-edit-item.rejected { opacity: 0.4; text-decoration: line-through; }
 
-.chat-edit-icon { font-size: 12px; }
-.chat-edit-info { flex: 1; min-width: 0; }
+.chat-edit-item:last-child {
+  border-bottom: none;
+}
+
+.chat-edit-item:hover {
+  background: var(--bg-hover);
+}
+
+.chat-edit-item.accepted {
+  opacity: 0.5;
+}
+
+.chat-edit-item.rejected {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.chat-edit-icon {
+  font-size: 12px;
+}
+
+.chat-edit-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .chat-edit-file {
   font-size: 11px;
   font-family: var(--font-mono);
@@ -475,6 +613,7 @@ html, body, #root {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .chat-edit-lines {
   font-size: 11px;
   color: var(--text-muted);
@@ -490,11 +629,13 @@ html, body, #root {
   transition: all 0.15s;
   font-family: var(--font-sans);
 }
+
 .chat-edit-btn.accept {
   background: var(--green-dim);
   color: var(--green);
   border-color: rgba(166, 227, 161, 0.3);
 }
+
 .chat-edit-btn.reject {
   background: var(--red-dim);
   color: var(--red);
@@ -512,7 +653,9 @@ html, body, #root {
 }
 
 @keyframes blink {
-  50% { opacity: 0; }
+  50% {
+    opacity: 0;
+  }
 }
 
 .chat-footer {
@@ -531,7 +674,10 @@ html, body, #root {
   gap: 8px;
   transition: border-color 0.15s;
 }
-.chat-input-wrapper:focus-within { border-color: var(--border-light); }
+
+.chat-input-wrapper:focus-within {
+  border-color: var(--border-light);
+}
 
 .chat-textarea {
   background: none;
@@ -545,7 +691,10 @@ html, body, #root {
   min-height: 60px;
   max-height: 160px;
 }
-.chat-textarea::placeholder { color: var(--text-muted); }
+
+.chat-textarea::placeholder {
+  color: var(--text-muted);
+}
 
 .chat-input-actions {
   display: flex;
@@ -573,8 +722,15 @@ html, body, #root {
   align-items: center;
   gap: 5px;
 }
-.btn-send:hover:not(:disabled) { opacity: 0.85; }
-.btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-send:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.btn-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 /* ─── No folder state ────────────────────────────────────────────── */
 .welcome-screen {
@@ -588,19 +744,24 @@ html, body, #root {
   padding: 40px;
   text-align: center;
 }
+
 .welcome-screen h1 {
   font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.5px;
 }
+
 .welcome-screen p {
   font-size: 14px;
   color: var(--text-secondary);
   max-width: 320px;
   line-height: 1.6;
 }
-.welcome-icon { font-size: 56px; }
+
+.welcome-icon {
+  font-size: 56px;
+}
 
 .btn-primary {
   padding: 12px 28px;
@@ -617,7 +778,13 @@ html, body, #root {
   align-items: center;
   gap: 8px;
 }
-.btn-primary:hover { opacity: 0.85; }
+
+.btn-primary:hover {
+  opacity: 0.85;
+}
 
 /* ─── Scrollbar global ───────────────────────────────────────────── */
-* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
