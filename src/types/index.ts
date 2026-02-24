@@ -34,6 +34,11 @@ export interface OllamaPayload {
   pinnedFiles: { path: string; content: string }[]
   history: { role: 'user' | 'assistant'; content: string }[]
   model: string
+  selectedCode?: {
+    content: string
+    startLine: number
+    endLine: number
+  }
 }
 
 export interface ElectronAPI {

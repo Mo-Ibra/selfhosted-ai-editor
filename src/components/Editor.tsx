@@ -13,6 +13,7 @@ interface EditorProps {
   onAcceptAll: () => void
   onRejectAll: () => void
   onSave: () => void
+  onSelectionChange: (selection: { content: string; startLine: number; endLine: number } | null) => void
 }
 
 function getLanguage(filePath: string | null): string {
@@ -40,6 +41,7 @@ export default function Editor({
   onAcceptAll,
   onRejectAll,
   onSave,
+  onSelectionChange,
 }: EditorProps) {
   const editorRef = useRef<any>(null)
   const monacoRef = useRef<Monaco | null>(null)
@@ -51,6 +53,22 @@ export default function Editor({
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
     monacoRef.current = monaco
+
+    // ─── Define Custom Theme (Standard with JSX Highlights) ─────────
+    monaco.editor.defineTheme('standard-jsx', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'tag', foreground: 'f38ba8' },
+        { token: 'tag.identifier', foreground: 'f38ba8' },
+        { token: 'tag.attribute.name', foreground: 'fab387' },
+        { token: 'delimiter.html', foreground: '94e2d5' },
+        { token: 'delimiter.xml', foreground: '94e2d5' },
+      ],
+      colors: {}
+    })
+
+    monaco.editor.setTheme('standard-jsx')
 
     // ─── Configure TypeScript/JSX ───────────────────────────────────
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
@@ -117,6 +135,11 @@ export default function Editor({
           export const useRef: any;
           export const useCallback: any;
           export const useMemo: any;
+          export const useContext: any;
+          export const createContext: any;
+          export const memo: any;
+          export const forwardRef: any;
+          export const Fragment: any;
           export default { useState, useEffect, useRef, useCallback, useMemo };
         }
         declare module 'react/jsx-runtime' {
@@ -124,6 +147,38 @@ export default function Editor({
           export const jsxs: any;
           export const Fragment: any;
         }
+        `
+      },
+      {
+        filePath: 'third-party-stubs.d.ts',
+        content: `
+          // lucide-react
+          declare module 'lucide-react' {
+            import { FC, SVGProps } from 'react';
+            export type LucideIcon = FC<SVGProps<SVGSVGElement> & { size?: number | string; strokeWidth?: number | string; }>;
+            export const [key: string]: LucideIcon;
+          }
+
+          // next.js
+          declare module 'next/link' { const Link: any; export default Link; }
+          declare module 'next/image' { const Image: any; export default Image; }
+          declare module 'next/navigation' {
+            export const useRouter: any;
+            export const usePathname: any;
+            export const useSearchParams: any;
+            export const redirect: any;
+          }
+          declare module 'next/server' { export const NextResponse: any; export const NextRequest: any; }
+          declare module 'next/font/google' { export const [key: string]: any; }
+          declare module 'next/headers' { export const cookies: any; export const headers: any; }
+
+          // utilities
+          declare module 'clsx' { const clsx: (...args: any[]) => string; export default clsx; export { clsx }; }
+          declare module 'tailwind-merge' { export const twMerge: (...args: any[]) => string; }
+          declare module 'class-variance-authority' { export const cva: any; export type VariantProps<T> = any; }
+
+          // Catch-all: silence "Cannot find module" for any other package
+          declare module '*' { const value: any; export default value; export = value; }
         `
       }
     ]
@@ -135,6 +190,22 @@ export default function Editor({
     // Add Save Command (Ctrl/Cmd + S)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       onSave()
+    })
+
+    // ─── Selection Tracking ──────────────────────────────────────────
+    editor.onDidChangeCursorSelection((e: any) => {
+      const selection = editor.getSelection()
+      if (!selection || selection.isEmpty()) {
+        onSelectionChange(null)
+        return
+      }
+
+      const selectedContent = editor.getModel()?.getValueInRange(selection) || ''
+      onSelectionChange({
+        content: selectedContent,
+        startLine: selection.startLineNumber,
+        endLine: selection.endLineNumber,
+      })
     })
   }
 
@@ -262,6 +333,7 @@ export default function Editor({
               theme="vs-dark"
               onMount={handleMount}
               onChange={(val) => onContentChange(val ?? '')}
+
               options={{
                 fontSize: 14,
                 fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",

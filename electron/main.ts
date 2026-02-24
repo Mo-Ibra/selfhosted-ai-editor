@@ -71,7 +71,7 @@ ipcMain.handle('fs:openFolder', async () => {
     }
 
     watcher = chokidar.watch(folderPath, {
-      ignored: Array.from(IGNORED),
+      ignored: Array.from(TREE_IGNORED),
       persistent: true,
       ignoreInitial: true,
       depth: 6,
@@ -87,11 +87,16 @@ ipcMain.handle('fs:openFolder', async () => {
   return null
 })
 
-// IGNORED paths for file tree
-const IGNORED = new Set([
-  'node_modules', '.git', 'dist', 'dist-electron', '.next',
+// TREE_IGNORED: hidden from the editor sidebar & file watcher
+const TREE_IGNORED = new Set([
+  '.git', '.DS_Store', 'Thumbs.db'
+])
+
+// AI_IGNORED: shown in the editor but excluded from the AI's file-tree context
+const AI_IGNORED = new Set([
+  'node_modules', 'dist', 'dist-electron', '.next',
   '__pycache__', '.cache', 'build', 'coverage', '.venv', 'venv',
-  '.DS_Store', 'Thumbs.db'
+  '.git', '.DS_Store', 'Thumbs.db'
 ])
 
 interface FileNode {
@@ -101,20 +106,20 @@ interface FileNode {
   children?: FileNode[]
 }
 
-function buildFileTree(dirPath: string, depth = 0): FileNode[] {
+function buildFileTree(dirPath: string, depth = 0, ignoredSet = TREE_IGNORED): FileNode[] {
   if (depth > 6) return []
   try {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true })
     const nodes: FileNode[] = []
     for (const entry of entries) {
-      if (IGNORED.has(entry.name)) continue
+      if (ignoredSet.has(entry.name)) continue
       const fullPath = path.join(dirPath, entry.name)
       if (entry.isDirectory()) {
         nodes.push({
           name: entry.name,
           path: fullPath,
           isDir: true,
-          children: buildFileTree(fullPath, depth + 1),
+          children: buildFileTree(fullPath, depth + 1, ignoredSet),
         })
       } else {
         nodes.push({ name: entry.name, path: fullPath, isDir: false })
@@ -165,6 +170,8 @@ ipcMain.on('window:close', () => win?.close())
 function buildFileTreeString(nodes: FileNode[], indent = ''): string {
   let result = ''
   for (const node of nodes) {
+    // Skip AI-ignored directories when building context for the AI
+    if (node.isDir && AI_IGNORED.has(node.name)) continue
     result += `${indent}${node.isDir ? '📁' : '📄'} ${node.name}\n`
     if (node.children) result += buildFileTreeString(node.children, indent + '  ')
   }
@@ -178,14 +185,20 @@ ipcMain.handle('ai:chat', async (event, payload: {
   pinnedFiles: { path: string; content: string }[]
   history: { role: 'user' | 'assistant'; content: string }[]
   model: string
+  selectedCode?: { content: string; startLine: number; endLine: number }
 }) => {
-  const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, history, model } = payload
+  const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, history, model, selectedCode } = payload
+
   const fileTreeStr = buildFileTreeString(fileTreeNodes)
 
   let pinnedContext = ''
   for (const pf of pinnedFiles) {
     pinnedContext += `\n<pinned_file path="${pf.path}">\n${pf.content}\n</pinned_file>\n`
   }
+
+  const selectionContext = selectedCode
+    ? `\n<selected_code line_start="${selectedCode.startLine}" line_end="${selectedCode.endLine}">\n${selectedCode.content}\n</selected_code>`
+    : ''
 
   const systemPrompt = `You are an expert AI code editor assistant embedded in a desktop IDE.
 Your goal is to provide extremely high-precision edits. Follow these instructions carefully:
@@ -204,7 +217,7 @@ ${fileTreeStr}
 ${pinnedContext ? `\n<pinned_files>${pinnedContext}</pinned_files>` : ''}
 <active_file path="${activeFilePath}">
 ${activeFile}
-</active_file>
+</active_file>${selectionContext}
 
 3. **Output Format**:
 - If you are making edits, YOU MUST respond with:

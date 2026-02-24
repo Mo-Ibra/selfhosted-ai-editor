@@ -1769,7 +1769,7 @@ ipcMain.handle("fs:openFolder", async () => {
       await watcher.close();
     }
     watcher = chokidar.watch(folderPath, {
-      ignored: Array.from(IGNORED),
+      ignored: Array.from(TREE_IGNORED),
       persistent: true,
       ignoreInitial: true,
       depth: 6
@@ -1781,9 +1781,13 @@ ipcMain.handle("fs:openFolder", async () => {
   }
   return null;
 });
-const IGNORED = /* @__PURE__ */ new Set([
-  "node_modules",
+const TREE_IGNORED = /* @__PURE__ */ new Set([
   ".git",
+  ".DS_Store",
+  "Thumbs.db"
+]);
+const AI_IGNORED = /* @__PURE__ */ new Set([
+  "node_modules",
   "dist",
   "dist-electron",
   ".next",
@@ -1793,23 +1797,24 @@ const IGNORED = /* @__PURE__ */ new Set([
   "coverage",
   ".venv",
   "venv",
+  ".git",
   ".DS_Store",
   "Thumbs.db"
 ]);
-function buildFileTree(dirPath, depth = 0) {
+function buildFileTree(dirPath, depth = 0, ignoredSet = TREE_IGNORED) {
   if (depth > 6) return [];
   try {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
     const nodes = [];
     for (const entry of entries) {
-      if (IGNORED.has(entry.name)) continue;
+      if (ignoredSet.has(entry.name)) continue;
       const fullPath = sp__default.join(dirPath, entry.name);
       if (entry.isDirectory()) {
         nodes.push({
           name: entry.name,
           path: fullPath,
           isDir: true,
-          children: buildFileTree(fullPath, depth + 1)
+          children: buildFileTree(fullPath, depth + 1, ignoredSet)
         });
       } else {
         nodes.push({ name: entry.name, path: fullPath, isDir: false });
@@ -1850,6 +1855,7 @@ ipcMain.on("window:close", () => win == null ? void 0 : win.close());
 function buildFileTreeString(nodes, indent = "") {
   let result = "";
   for (const node of nodes) {
+    if (node.isDir && AI_IGNORED.has(node.name)) continue;
     result += `${indent}${node.isDir ? "📁" : "📄"} ${node.name}
 `;
     if (node.children) result += buildFileTreeString(node.children, indent + "  ");
@@ -1857,7 +1863,7 @@ function buildFileTreeString(nodes, indent = "") {
   return result;
 }
 ipcMain.handle("ai:chat", async (event, payload) => {
-  const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, history, model } = payload;
+  const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, history, model, selectedCode } = payload;
   const fileTreeStr = buildFileTreeString(fileTreeNodes);
   let pinnedContext = "";
   for (const pf of pinnedFiles) {
@@ -1867,6 +1873,10 @@ ${pf.content}
 </pinned_file>
 `;
   }
+  const selectionContext = selectedCode ? `
+<selected_code line_start="${selectedCode.startLine}" line_end="${selectedCode.endLine}">
+${selectedCode.content}
+</selected_code>` : "";
   const systemPrompt = `You are an expert AI code editor assistant embedded in a desktop IDE.
 Your goal is to provide extremely high-precision edits. Follow these instructions carefully:
 
@@ -1885,7 +1895,7 @@ ${pinnedContext ? `
 <pinned_files>${pinnedContext}</pinned_files>` : ""}
 <active_file path="${activeFilePath}">
 ${activeFile}
-</active_file>
+</active_file>${selectionContext}
 
 3. **Output Format**:
 - If you are making edits, YOU MUST respond with:

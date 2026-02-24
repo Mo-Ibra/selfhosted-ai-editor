@@ -10,6 +10,7 @@ interface AIChatProps {
   acceptedEdits: string[]
   rejectedEdits: string[]
   aiModel: string
+  selectedCode: { content: string; startLine: number; endLine: number } | null
 }
 
 export default function AIChat({
@@ -21,6 +22,7 @@ export default function AIChat({
   acceptedEdits,
   rejectedEdits,
   aiModel,
+  selectedCode,
 }: AIChatProps) {
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -128,6 +130,12 @@ export default function AIChat({
       </div>
 
       <div className="chat-footer">
+        {selectedCode && (
+          <div className="chat-selection-badge">
+            <span className="selection-icon">🎯</span>
+            Selection Active: Lines {selectedCode.startLine}–{selectedCode.endLine}
+          </div>
+        )}
         <div className="chat-input-wrapper">
           <textarea
             ref={textareaRef}
@@ -140,7 +148,7 @@ export default function AIChat({
             rows={3}
           />
           <div className="chat-input-actions">
-            <span className="chat-hint">Enter to send · Shift+Enter for newline</span>
+            <span className="chat-hint">Enter to send · Shift+Enter for newline · Use @filename to mention files</span>
             <button
               className="btn-send"
               onClick={handleSend}

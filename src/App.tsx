@@ -169,6 +169,9 @@ export default function App() {
     })
   }, [])
 
+  // ─── AI Context & Selection ─────────────────────────────────────
+  const [selectedCode, setSelectedCode] = useState<{ content: string; startLine: number; endLine: number } | null>(null)
+
   // ─── Send Message to AI ──────────────────────────────────────────
   const handleSend = useCallback(async (text: string) => {
     if (!folderPath) return
@@ -196,13 +199,41 @@ export default function App() {
     setAcceptedEdits([])
     setRejectedEdits([])
 
+    // ─── Mentioned Files Detection ───────────────────────────────
+    const mentions = text.match(/@(\S+)/g) || []
+    const mentionedPaths = mentions.map(m => m.slice(1))
+
+    // Find absolute paths for mentioned files
+    const allFilePaths = Object.keys(fileContents)
+    const mentionedFileContents = await Promise.all(
+      mentionedPaths.map(async (mention) => {
+        // Try exact match or end-of-path match
+        const foundPath = allFilePaths.find(p => p === mention || p.endsWith(mention.replace(/\//g, '\\')))
+        if (foundPath) {
+          return {
+            path: foundPath,
+            content: fileContents[foundPath] ?? (await window.electronAPI.readFile(foundPath))
+          }
+        }
+        return null
+      })
+    ).then(res => res.filter(r => r !== null) as { path: string; content: string }[])
+
     // Gather pinned file contents
-    const pinnedFileContents = await Promise.all(
+    const pinnedFileContext = await Promise.all(
       pinnedFiles.map(async (p) => ({
         path: p,
         content: fileContents[p] ?? (await window.electronAPI.readFile(p)),
       }))
     )
+
+    // Combine pinned and mentioned (avoid duplicates)
+    const extraFiles = [...pinnedFileContext]
+    for (const mf of mentionedFileContents) {
+      if (!extraFiles.some(f => f.path === mf.path)) {
+        extraFiles.push(mf)
+      }
+    }
 
     // Build relative file tree for prompt
     const activeContent = activeFilePath ? (fileContents[activeFilePath] ?? '') : ''
@@ -211,14 +242,19 @@ export default function App() {
       activeFile: activeContent,
       activeFilePath: activeFilePath || '',
       fileTreeNodes: fileTree,
-      pinnedFiles: pinnedFileContents,
+      pinnedFiles: extraFiles, // Now includes mentions
       history: [...messages, userMsg].map((m) => ({
         role: m.role,
         content: m.content,
       })),
       model: aiModel,
+      selectedCode: selectedCode ? {
+        content: selectedCode.content,
+        startLine: selectedCode.startLine,
+        endLine: selectedCode.endLine,
+      } : undefined,
     })
-  }, [folderPath, fileTree, activeFilePath, fileContents, pinnedFiles, messages, aiModel])
+  }, [folderPath, fileTree, activeFilePath, fileContents, pinnedFiles, messages, aiModel, selectedCode])
 
   // ─── Apply Edit to File Content ──────────────────────────────────
   const applyEdit = useCallback((edit: AIEdit): string | null => {
@@ -389,6 +425,7 @@ export default function App() {
               onAcceptAll={handleAcceptAll}
               onRejectAll={handleRejectAll}
               onSave={handleSave}
+              onSelectionChange={setSelectedCode}
             />
 
             {showTerminal && (
@@ -408,6 +445,7 @@ export default function App() {
             acceptedEdits={acceptedEdits}
             rejectedEdits={rejectedEdits}
             aiModel={aiModel}
+            selectedCode={selectedCode}
           />
         </div>
       )}
