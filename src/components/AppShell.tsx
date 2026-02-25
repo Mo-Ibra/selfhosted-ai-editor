@@ -1,4 +1,4 @@
-import { useApp } from "../AppContext";
+import { useApp } from "../AppProvider";
 import MainLayout from "./MainLayout";
 import TitleBar from "./TitleBar";
 import WelcomeScreen from "./WelcomeScreen";

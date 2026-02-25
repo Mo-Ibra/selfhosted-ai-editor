@@ -4,7 +4,6 @@ import { useFileSystem } from "./hooks/useFileSystem";
 import { useEditor } from "./hooks/useEditor";
 import { useAIChat } from "./hooks/useAIChat";
 
-
 // ─── Context Type (composed from all hooks) ───
 export type AppContextValue =
   ReturnType<typeof useFileSystem> &

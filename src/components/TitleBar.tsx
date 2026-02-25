@@ -1,4 +1,4 @@
-import { useApp } from "../AppContext";
+import { useApp } from "../AppProvider";
 
 function TitleBar() {
   const { folderName, activeFileName } = useApp()

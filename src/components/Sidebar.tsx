@@ -1,4 +1,4 @@
-import { useApp } from "../AppContext";
+import { useApp } from "../AppProvider";
 import FileExplorer from "./FileExplorer";
 
 function Sidebar() {

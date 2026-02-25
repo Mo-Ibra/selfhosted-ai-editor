@@ -1,4 +1,4 @@
-import { useApp } from "../AppContext";
+import { useApp } from "../AppProvider";
 
 function EditorTabs() {
   const { activeFilePath, activeFileName, dirtyFiles, closeFile } = useApp()

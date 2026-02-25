@@ -1,4 +1,4 @@
-import { useApp } from "../AppContext";
+import { useApp } from "../AppProvider";
 import Editor from "./Editor";
 import EditorTabs from "./EditorTabs";
 import Terminal from "./Terminal";
