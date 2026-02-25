@@ -311,11 +311,7 @@ body,
 
 .file-tree-children {
   position: relative;
-  /* Guideline is drawn via border-left on a wrapper if we had fixed depth, 
-     but since we have dynamic padding, we'll use a slightly different approach or just the border.
-     Adding a subtle border-left to represent the nesting level. */
-  /* Align with folder icon */
-  margin-left: 14px;
+  margin-left: 8px;
   border-left: 1px solid var(--border);
   padding-left: 4px;
 }

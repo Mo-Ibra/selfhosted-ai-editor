@@ -47,7 +47,7 @@ function FileItem({
       <div>
         <div
           className="file-tree-item directory"
-          style={{ paddingLeft: `${8 + depth * 18}px` }}
+          style={{ paddingLeft: `${8 + depth * 10}px` }}
           onClick={() => setIsOpen(!isOpen)}
         >
           <span className={`file-tree-chevron ${isOpen ? 'open' : ''}`}>▶</span>
@@ -76,7 +76,7 @@ function FileItem({
   return (
     <div
       className={`file-tree-item ${isActive ? 'active' : ''} ${isPinned ? 'pinned' : ''}`}
-      style={{ paddingLeft: `${8 + depth * 18}px` }}
+      style={{ paddingLeft: `${8 + depth * 10}px` }}
       onClick={() => onFileClick(node.path)}
     >
       <span className="file-tree-icon">{getFileIcon(node.name, false)}</span>
