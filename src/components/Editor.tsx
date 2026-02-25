@@ -47,7 +47,11 @@ export default function Editor({
   const monacoRef = useRef<Monaco | null>(null)
   const decorationsRef = useRef<string[]>([])
   const extraLibsRef = useRef<any[]>([])
+  const onSaveRef = useRef(onSave)
   const [currentEditIndex, setCurrentEditIndex] = useState(0)
+
+  // Keep ref in sync so Monaco's mounted command always calls the latest onSave
+  useEffect(() => { onSaveRef.current = onSave }, [onSave])
 
   // ─── Setup Monaco & Standard Libs ───────────────────────────────
   const handleMount: OnMount = (editor, monaco) => {
@@ -187,9 +191,9 @@ export default function Editor({
       monaco.languages.typescript.typescriptDefaults.addExtraLib(lib.content, `file:///${lib.filePath}`)
     })
 
-    // Add Save Command (Ctrl/Cmd + S)
+    // Add Save Command (Ctrl/Cmd + S) — use ref to avoid stale closure
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      onSave()
+      onSaveRef.current()
     })
 
     // ─── Selection Tracking ──────────────────────────────────────────
