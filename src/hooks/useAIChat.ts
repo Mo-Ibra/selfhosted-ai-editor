@@ -35,52 +35,21 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
     localStorage.setItem('ai-model', aiModel)
   }, [aiModel])
 
-  // ── Streaming Listeners ──
-  useEffect(() => {
-    window.electronAPI.removeAllListeners('ai:chunk');
-    window.electronAPI.removeAllListeners('ai:done');
 
-    window.electronAPI.onChatChunk((chunk: string) => {
-      const id = streamingMsgId.current;
-      if (!id) return;
-      setMessages((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, content: m.content + chunk } : m))
-      );
-    });
-
-    window.electronAPI.onChatDone((response: AIResponse | null) => {
-      const id = streamingMsgId.current;
-      streamingMsgId.current = null;
-      setIsStreaming(false);
-
-      if (response?.edits?.length) {
-        setPendingEdits(response.edits)
-        setAcceptedEdits([])
-        setRejectedEdits([])
-
-        if (id) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === id
-                ? { ...m, content: response.explanation || m.content, edits: response.edits, isStreaming: false }
-                : m
-            )
-          )
-        } else {
-          if (id) {
-            setMessages((prev) =>
-              prev.map((m) => (m.id === id ? { ...m, isStreaming: false } : m))
-            )
-          }
-        }
-      }
-    })
-  }, [])
 
 
   // ── Send Message ──
   const sendMessage = useCallback(async (text: string) => {
     if (!folderPath) return;
+
+    let processedText = text;
+    const approvalKeywords = ['ok', 'execute', 'تمام', 'نفذ', 'approved', 'وافق'];
+    const isApproval = approvalKeywords.some(k => text.toLowerCase().includes(k));
+
+    // If it looks like an approval, add a hint for the AI
+    if (isApproval && messages.some(m => m.content.toLowerCase().includes('implementation_plan.md'))) {
+      processedText = `[USER APPROVED PLAN] ${text}\nNow please provide the high-precision JSON edits for the code files as outlined in the plan.`;
+    }
 
     const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: text }
     const assistantId = `assistant-${Date.now()}`
@@ -99,7 +68,10 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
       activeFilePath: activeFilePath || '',
       fileTreeNodes: fileTree,
       pinnedFiles: extraFiles,
-      history: [...messages, userMsg].map(({ role, content }) => ({ role, content })),
+      history: [...messages, userMsg].map(({ role, content }) => {
+        if (content === text) return { role: 'user', content: processedText };
+        return { role, content };
+      }),
       model: aiModel,
       selectedCode: selectedCode ?? undefined,
     })
@@ -151,6 +123,50 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
     setAcceptedEdits([])
     setRejectedEdits([])
   }, [])
+
+  // ── Streaming Listeners ──
+  useEffect(() => {
+    window.electronAPI.removeAllListeners('ai:chunk');
+    window.electronAPI.removeAllListeners('ai:done');
+
+    window.electronAPI.onChatChunk((chunk: string) => {
+      const id = streamingMsgId.current;
+      if (!id) return;
+      setMessages((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, content: m.content + chunk } : m))
+      );
+    });
+
+    window.electronAPI.onChatDone(async (response: AIResponse | null) => {
+      const id = streamingMsgId.current;
+      streamingMsgId.current = null;
+      setIsStreaming(false);
+
+      if (response?.edits?.length) {
+        // Automatically apply implementation_plan.md edits
+        const planEdit = response.edits.find(e => e.file.toLowerCase().includes('implementation_plan.md'));
+        if (planEdit) {
+          const result = applyEditToContent(planEdit);
+          if (result) {
+            await writeFile(result.targetPath, result.newContent);
+            setAcceptedEdits(prev => [...prev, planEdit.id]);
+          }
+        }
+
+        setPendingEdits(response.edits.filter(e => e.id !== planEdit?.id))
+
+        if (id) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === id
+                ? { ...m, content: response.explanation || m.content, edits: response.edits, isStreaming: false }
+                : m
+            )
+          )
+        }
+      }
+    })
+  }, [applyEditToContent, writeFile])
 
   return {
     aiModel, setAiModel,
