@@ -6,7 +6,7 @@ import Terminal from "./Terminal";
 function EditorPane() {
   const {
     folderPath, activeFilePath, activeContent,
-    fileContents, dirtyFiles, pendingEdits, showTerminal,
+    fileContents, pendingEdits, showTerminal,
     changeContent, saveFile,
     acceptEdit, rejectEdit, acceptAllEdits, rejectAllEdits,
     setSelectedCode, closeTerminal,

@@ -197,7 +197,7 @@ export default function Editor({
     })
 
     // ─── Selection Tracking ──────────────────────────────────────────
-    editor.onDidChangeCursorSelection((e: any) => {
+    editor.onDidChangeCursorSelection(() => {
       const selection = editor.getSelection()
       if (!selection || selection.isEmpty()) {
         onSelectionChange(null)
