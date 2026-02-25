@@ -5,6 +5,7 @@ import { AIEdit } from '../types'
 interface EditorProps {
   content: string
   filePath: string | null
+  folderPath: string | null
   fileContents: Record<string, string>
   pendingEdits: AIEdit[]
   onContentChange: (content: string) => void
@@ -33,6 +34,7 @@ function getLanguage(filePath: string | null): string {
 export default function Editor({
   content,
   filePath,
+  folderPath,
   fileContents,
   pendingEdits,
   onContentChange,
@@ -46,12 +48,13 @@ export default function Editor({
   const editorRef = useRef<any>(null)
   const monacoRef = useRef<Monaco | null>(null)
   const decorationsRef = useRef<string[]>([])
-  const extraLibsRef = useRef<any[]>([])
   const onSaveRef = useRef(onSave)
+  const folderPathRef = useRef(folderPath)
   const [currentEditIndex, setCurrentEditIndex] = useState(0)
 
-  // Keep ref in sync so Monaco's mounted command always calls the latest onSave
+  // Keep refs in sync so Monaco's mounted callbacks always use latest values
   useEffect(() => { onSaveRef.current = onSave }, [onSave])
+  useEffect(() => { folderPathRef.current = folderPath }, [folderPath])
 
   // ─── Setup Monaco & Standard Libs ───────────────────────────────
   const handleMount: OnMount = (editor, monaco) => {
@@ -75,6 +78,7 @@ export default function Editor({
     monaco.editor.setTheme('standard-jsx')
 
     // ─── Configure TypeScript/JSX ───────────────────────────────────
+    const root = folderPathRef.current?.replace(/\\/g, '/') ?? ''
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
       target: monaco.languages.typescript.ScriptTarget.ESNext,
       allowNonTsExtensions: true,
@@ -84,9 +88,9 @@ export default function Editor({
       jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
       allowJs: true,
       esModuleInterop: true,
-      baseUrl: 'file:///',
+      baseUrl: root || 'file:///',
       paths: {
-        '@/*': ['src/*']
+        '@/*': [`${root}/src/*`]
       },
       typeRoots: ['node_modules/@types']
     })
@@ -211,32 +215,110 @@ export default function Editor({
         endLine: selection.endLineNumber,
       })
     })
+
+    // ─── Inline Completions (AI Autocomplete) ───────────────────────
+    let typingTimer: any = null
+    const languages = ['typescript', 'javascript', 'python', 'rust', 'go', 'html', 'css', 'json', 'plaintext']
+    const provider = monaco.languages.registerInlineCompletionsProvider(languages, {
+      provideInlineCompletions: async (model: import('monaco-editor').editor.ITextModel, position: import('monaco-editor').Position) => {
+        if (typingTimer) clearTimeout(typingTimer)
+
+        return new Promise((resolve) => {
+          typingTimer = setTimeout(async () => {
+            const lineContent = model.getLineContent(position.lineNumber)
+            const isAtEndOfLine = position.column > lineContent.trimEnd().length
+
+            // Log for debugging
+            console.log(`[Autocomplete] Line: ${position.lineNumber}, Col: ${position.column}, EOL: ${isAtEndOfLine}`)
+
+            // Only trigger if at end of line and line isn't just symbols
+            if (!isAtEndOfLine || lineContent.trim().length < 2) {
+              resolve({ items: [] })
+              return
+            }
+
+            const prefix = model.getValueInRange({
+              startLineNumber: Math.max(1, position.lineNumber - 50),
+              startColumn: 1,
+              endLineNumber: position.lineNumber,
+              endColumn: position.column
+            })
+
+            const suffix = model.getValueInRange({
+              startLineNumber: position.lineNumber,
+              startColumn: position.column,
+              endLineNumber: Math.min(model.getLineCount(), position.lineNumber + 50),
+              endColumn: 1000
+            })
+
+            try {
+              console.log('[Autocomplete] Fetching from AI...')
+              const suggestion = await window.electronAPI.getAICompletion(prefix, suffix, 'qwen3-coder:480b-cloud')
+              console.log('[Autocomplete] Got suggestion:', suggestion ? 'Yes' : 'No')
+
+              if (!suggestion) {
+                resolve({ items: [] })
+                return
+              }
+
+              resolve({
+                items: [{
+                  insertText: suggestion,
+                  range: {
+                    startLineNumber: position.lineNumber,
+                    startColumn: position.column,
+                    endLineNumber: position.lineNumber,
+                    endColumn: position.column
+                  }
+                }]
+              })
+            } catch (e) {
+              console.error('[Autocomplete] Error:', e)
+              resolve({ items: [] })
+            }
+          }, 350)
+        })
+      },
+      freeInlineCompletions: () => { }
+    })
+
+    editor.onDidDispose(() => provider.dispose())
   }
 
-  // ─── Project File Awareness ──────────────────────────────────────
+  // ─── Project File Model Registration ────────────────────────────
+  // Creates real Monaco models for each loaded project file so the
+  // TypeScript worker can resolve imports → Ctrl+Click, export errors,
+  // and autocomplete all work automatically.
   useEffect(() => {
     if (!monacoRef.current) return
     const monaco = monacoRef.current
+    const activeUri = filePath?.replace(/\\/g, '/')
 
-    // Clear old project libs
-    extraLibsRef.current.forEach(lib => lib.dispose())
-    extraLibsRef.current = []
+    // Create or update a model for every loaded project file
+    Object.entries(fileContents).forEach(([absPath, content]) => {
+      const uriStr = absPath.replace(/\\/g, '/')
+      if (uriStr === activeUri) return  // MonacoEditor manages the active file
 
-    // Inject all loaded project files as extra libs
-    Object.entries(fileContents).forEach(([path, content]) => {
-      // Don't add the active file as an extra lib if it's already a model
-      // But add others for cross-file resolution
-      try {
-        const lib = monaco.languages.typescript.typescriptDefaults.addExtraLib(
-          content,
-          `file:///${path.replace(/\\/g, '/')}`
-        )
-        extraLibsRef.current.push(lib)
-      } catch (e) {
-        console.warn('Failed to add extra lib for', path, e)
+      const uri = monaco.Uri.parse(uriStr)
+      const existing = monaco.editor.getModel(uri)
+      if (existing) {
+        if (existing.getValue() !== content) existing.setValue(content)
+      } else {
+        try { monaco.editor.createModel(content, getLanguage(absPath), uri) }
+        catch (e) { console.warn('Failed to create model for', absPath, e) }
       }
     })
-  }, [fileContents])
+
+    // Dispose models for files no longer in fileContents
+    monaco.editor.getModels().forEach((model: import('monaco-editor').editor.ITextModel) => {
+      const uriStr = model.uri.toString()
+      if (uriStr === activeUri) return
+      const stillLoaded = Object.keys(fileContents).some(
+        p => p.replace(/\\/g, '/') === uriStr
+      )
+      if (!stillLoaded) model.dispose()
+    })
+  }, [fileContents, filePath])
 
   // ─── Diff Decorations ────────────────────────────────────────────
   useEffect(() => {

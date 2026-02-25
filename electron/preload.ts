@@ -33,4 +33,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onPtyExit: (pid: number, callback: (payload: { exitCode: number; signal?: number }) => void) => {
     ipcRenderer.on(`pty:exit-${pid}`, (_event, payload) => callback(payload))
   },
+
+  // AI Completions
+  getAICompletion: (prefix: string, suffix: string, model: string) =>
+    ipcRenderer.invoke('ai:complete', { prefix, suffix, model }),
 })

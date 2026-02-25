@@ -1993,6 +1993,58 @@ ${activeFile}
     req.end();
   });
 });
+ipcMain.handle("ai:complete", async (_event, payload) => {
+  const { prefix, suffix, model } = payload;
+  const modelName = model || "qwen3-coder:480b-cloud";
+  console.log(`[AI Complete] Requesting completion from ${modelName}...`);
+  const prompt = `<|fim_prefix|>${prefix}<|fim_suffix|>${suffix}<|fim_middle|>`;
+  const requestBody = JSON.stringify({
+    model: modelName,
+    prompt,
+    stream: false,
+    options: {
+      num_predict: 128,
+      temperature: 0,
+      stop: ["<|file_separator|>", "<|fim_prefix|>", "<|fim_suffix|>", "<|fim_middle|>", "\n\n"]
+    }
+  });
+  return new Promise((resolve2, reject) => {
+    const options = {
+      hostname: "localhost",
+      port: 11434,
+      path: "/api/generate",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(requestBody)
+      }
+    };
+    let responseData = "";
+    const req = http.request(options, (res) => {
+      res.on("data", (chunk) => {
+        responseData += chunk.toString();
+      });
+      res.on("end", () => {
+        try {
+          const parsed = JSON.parse(responseData);
+          let suggestion = parsed.response || "";
+          suggestion = suggestion.replace(/^```[a-z]*\n/i, "").replace(/```$/g, "").trim();
+          console.log(`[AI Complete] Received suggestion: "${suggestion.slice(0, 50)}..."`);
+          resolve2(suggestion);
+        } catch (e) {
+          console.error("[AI Complete] JSON Parse Error:", e);
+          resolve2("");
+        }
+      });
+    });
+    req.on("error", (err) => {
+      console.error("[AI Complete] Network Error:", err);
+      reject(err);
+    });
+    req.write(requestBody);
+    req.end();
+  });
+});
 const ptyProcesses = /* @__PURE__ */ new Map();
 ipcMain.handle("pty:spawn", async (event, cwd) => {
   const shell = os.platform() === "win32" ? "powershell.exe" : process.env.SHELL || "bash";

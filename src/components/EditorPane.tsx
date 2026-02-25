@@ -19,6 +19,7 @@ function EditorPane() {
       <Editor
         content={activeContent}
         filePath={activeFilePath}
+        folderPath={folderPath}
         fileContents={fileContents}
         pendingEdits={pendingEdits}
         onContentChange={changeContent}

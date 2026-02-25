@@ -62,6 +62,9 @@ export interface ElectronAPI {
   ptyKill: (pid: number) => void
   onPtyData: (pid: number, callback: (data: string) => void) => void
   onPtyExit: (pid: number, callback: (payload: { exitCode: number; signal?: number }) => void) => void
+
+  // AI Completions
+  getAICompletion: (prefix: string, suffix: string, model: string) => Promise<string>
 }
 
 declare global {

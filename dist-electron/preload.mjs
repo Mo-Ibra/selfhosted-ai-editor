@@ -31,5 +31,7 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   },
   onPtyExit: (pid, callback) => {
     electron.ipcRenderer.on(`pty:exit-${pid}`, (_event, payload) => callback(payload));
-  }
+  },
+  // AI Completions
+  getAICompletion: (prefix, suffix, model) => electron.ipcRenderer.invoke("ai:complete", { prefix, suffix, model })
 });
