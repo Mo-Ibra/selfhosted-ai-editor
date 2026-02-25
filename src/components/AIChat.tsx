@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, KeyboardEvent } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { ChatMessage, AIEdit } from '../types'
 
 interface AIChatProps {
@@ -81,9 +82,11 @@ export default function AIChat({
               {msg.role === 'user' ? '👤 You' : '🤖 AI'}
             </span>
             <div className="chat-message-content">
-              {msg.role === 'assistant' && msg.edits && msg.edits.length > 0
-                ? msg.content  // explanation text
-                : msg.content}
+              {msg.role === 'assistant' ? (
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              ) : (
+                msg.content
+              )}
               {msg.isStreaming && <span className="cursor-blink" />}
             </div>
 
