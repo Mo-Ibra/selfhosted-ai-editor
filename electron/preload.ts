@@ -37,4 +37,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // AI Completions
   getAICompletion: (prefix: string, suffix: string, model: string) =>
     ipcRenderer.invoke('ai:complete', { prefix, suffix, model }),
+  stopAI: () => ipcRenderer.send('ai:stop'),
 })

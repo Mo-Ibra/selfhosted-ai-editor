@@ -124,6 +124,18 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
     setRejectedEdits([])
   }, [])
 
+  const stopChat = useCallback(() => {
+    window.electronAPI.stopAI()
+    const id = streamingMsgId.current
+    streamingMsgId.current = null
+    setIsStreaming(false)
+
+    // Remove the assistant's partial response
+    if (id) {
+      setMessages(prev => prev.filter(m => m.id !== id))
+    }
+  }, [])
+
   // ── Streaming Listeners ──
   useEffect(() => {
     window.electronAPI.removeAllListeners('ai:chunk');
@@ -182,6 +194,7 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
     acceptAllEdits,
     rejectAllEdits,
     resetChat,
+    stopChat,
   }
 }
 

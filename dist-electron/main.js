@@ -1862,6 +1862,13 @@ function buildFileTreeString(nodes, indent = "") {
   }
   return result;
 }
+let activeChatRequest = null;
+ipcMain.on("ai:stop", () => {
+  if (activeChatRequest) {
+    activeChatRequest.destroy();
+    activeChatRequest = null;
+  }
+});
 ipcMain.handle("ai:chat", async (event, payload) => {
   const { activeFile, activeFilePath, fileTreeNodes, pinnedFiles, history, model, selectedCode } = payload;
   const fileTreeStr = buildFileTreeString(fileTreeNodes);
@@ -1950,7 +1957,9 @@ ${activeFile}
       }
     };
     let fullResponse = "";
+    if (activeChatRequest) activeChatRequest.destroy();
     const req = http.request(options, (res) => {
+      activeChatRequest = req;
       res.on("data", (chunk) => {
         var _a;
         const lines = chunk.toString().split("\n").filter(Boolean);
@@ -1988,12 +1997,17 @@ ${activeFile}
           }
         }
       });
+      res.on("end", () => {
+        activeChatRequest = null;
+      });
       res.on("error", (err) => {
+        activeChatRequest = null;
         event.sender.send("ai:done", null);
         reject(err);
       });
     });
     req.on("error", (err) => {
+      activeChatRequest = null;
       event.sender.send("ai:done", null);
       reject(err);
     });

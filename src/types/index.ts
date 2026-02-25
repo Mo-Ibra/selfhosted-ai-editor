@@ -65,6 +65,7 @@ export interface ElectronAPI {
 
   // AI Completions
   getAICompletion: (prefix: string, suffix: string, model: string) => Promise<string>
+  stopAI: () => void
 }
 
 declare global {

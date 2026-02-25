@@ -951,6 +951,27 @@ body,
   cursor: not-allowed;
 }
 
+.btn-stop {
+  padding: 6px 14px;
+  background: var(--red-dim);
+  color: var(--red);
+  border: 1px solid rgba(243, 139, 168, 0.3);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-stop:hover {
+  background: rgba(243, 139, 168, 0.25);
+  border-color: var(--red);
+}
+
 /* ─── No folder state ────────────────────────────────────────────── */
 .welcome-screen {
   display: flex;

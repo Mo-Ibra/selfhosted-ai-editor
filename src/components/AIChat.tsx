@@ -12,6 +12,7 @@ interface AIChatProps {
   rejectedEdits: string[]
   aiModel: string
   selectedCode: { content: string; startLine: number; endLine: number } | null
+  onStop: () => void
 }
 
 export default function AIChat({
@@ -24,6 +25,7 @@ export default function AIChat({
   rejectedEdits,
   aiModel,
   selectedCode,
+  onStop,
 }: AIChatProps) {
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -159,6 +161,15 @@ export default function AIChat({
             >
               {isStreaming ? '⏳' : '↑'} Send
             </button>
+            {isStreaming && (
+              <button
+                className="btn-stop"
+                onClick={onStop}
+                title="Stop generation"
+              >
+                ⏹ Stop
+              </button>
+            )}
           </div>
         </div>
       </div>
