@@ -1957,6 +1957,10 @@ ${activeFile}
     { role: "system", content: systemPrompt },
     ...history
   ];
+  if (activeChatRequest) {
+    activeChatRequest.destroy();
+    activeChatRequest = null;
+  }
   const runAgenticLoop = async (msgs) => {
     const requestBody = JSON.stringify({
       model: model || "qwen3-coder:480b-cloud",
@@ -1975,7 +1979,6 @@ ${activeFile}
         }
       };
       let fullResponse = "";
-      if (activeChatRequest) activeChatRequest.destroy();
       const req = http.request(options, (res) => {
         activeChatRequest = req;
         res.on("data", (chunk) => {
@@ -2003,17 +2006,21 @@ ${activeFile}
           }
         });
         res.on("end", () => {
-          activeChatRequest = null;
+          if (activeChatRequest === req) activeChatRequest = null;
         });
         res.on("error", (err) => {
-          activeChatRequest = null;
-          event.sender.send("ai:done", null);
+          if (activeChatRequest === req) {
+            activeChatRequest = null;
+            event.sender.send("ai:done", null);
+          }
           reject(err);
         });
       });
       req.on("error", (err) => {
-        activeChatRequest = null;
-        event.sender.send("ai:done", null);
+        if (activeChatRequest === req) {
+          activeChatRequest = null;
+          event.sender.send("ai:done", null);
+        }
         reject(err);
       });
       req.write(requestBody);

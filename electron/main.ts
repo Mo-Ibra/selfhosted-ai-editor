@@ -284,6 +284,12 @@ ${activeFile}
     ...history,
   ]
 
+  // Clear any previous chat request before starting the loop
+  if (activeChatRequest) {
+    activeChatRequest.destroy()
+    activeChatRequest = null
+  }
+
   // ── Agentic loop: run until we get a final response (edits or plain text) ──
   const runAgenticLoop = async (msgs: { role: string; content: string }[]): Promise<void> => {
     const requestBody = JSON.stringify({
@@ -305,8 +311,6 @@ ${activeFile}
       }
 
       let fullResponse = ''
-
-      if (activeChatRequest) activeChatRequest.destroy()
 
       const req = http.request(options, (res) => {
         activeChatRequest = req
@@ -335,17 +339,23 @@ ${activeFile}
           }
         })
 
-        res.on('end', () => { activeChatRequest = null })
+        res.on('end', () => {
+          if (activeChatRequest === req) activeChatRequest = null
+        })
         res.on('error', (err) => {
-          activeChatRequest = null
-          event.sender.send('ai:done', null)
+          if (activeChatRequest === req) {
+            activeChatRequest = null
+            event.sender.send('ai:done', null)
+          }
           reject(err)
         })
       })
 
       req.on('error', (err) => {
-        activeChatRequest = null
-        event.sender.send('ai:done', null)
+        if (activeChatRequest === req) {
+          activeChatRequest = null
+          event.sender.send('ai:done', null)
+        }
         reject(err)
       })
 
