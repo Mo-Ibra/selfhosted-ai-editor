@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { AIEdit, AIResponse, ChatMessage, FileNode } from "../types"
+import { AIEdit, AIResponsePayload, ChatMessage, FileNode } from "../types"
 
 interface SelectedCode {
   content: string
@@ -35,21 +35,9 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
     localStorage.setItem('ai-model', aiModel)
   }, [aiModel])
 
-
-
-
   // ── Send Message ──
   const sendMessage = useCallback(async (text: string) => {
     if (!folderPath) return;
-
-    let processedText = text;
-    const approvalKeywords = ['ok', 'execute', 'تمام', 'نفذ', 'approved', 'وافق'];
-    const isApproval = approvalKeywords.some(k => text.toLowerCase().includes(k));
-
-    // If it looks like an approval, add a hint for the AI
-    if (isApproval && messages.some(m => m.content.toLowerCase().includes('implementation_plan.md'))) {
-      processedText = `[USER APPROVED PLAN] ${text}\nNow please provide the high-precision JSON edits for the code files as outlined in the plan.`;
-    }
 
     const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: text }
     const assistantId = `assistant-${Date.now()}`
@@ -68,50 +56,158 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
       activeFilePath: activeFilePath || '',
       fileTreeNodes: fileTree,
       pinnedFiles: extraFiles,
-      history: [...messages, userMsg].map(({ role, content }) => {
-        if (content === text) return { role: 'user', content: processedText };
-        return { role, content };
-      }),
+      history: [...messages, userMsg].map(({ role, content }) => ({ role, content })),
       model: aiModel,
       selectedCode: selectedCode ?? undefined,
     })
   }, [folderPath, fileTree, fileContents, activeFilePath, pinnedFiles, messages, aiModel, selectedCode, readFile])
 
-  // ── Edit Helpers ──
-
-  const applyEditToContent = useCallback((edit: AIEdit): { targetPath: string; newContent: string } | null => {
-    const isNewFile = edit.startLine === 0 && edit.endLine === 0;
+  // ── SEARCH/REPLACE Engine ──
+  const applyEditToContent = useCallback((edit: AIEdit, baseContent?: string): { targetPath: string; newContent: string } | null => {
     const targetPath = resolveTargetPath(edit.file, fileContents, activeFilePath, folderPath)
-
     if (!targetPath) return null;
-    if (isNewFile) return { targetPath, newContent: edit.newContent };
 
-    const lines = (fileContents[targetPath] ?? '').split('\n');
+    // For 'create' action
+    if (edit.action === 'create') {
+      return { targetPath, newContent: edit.content ?? '' };
+    }
 
-    lines.splice(edit.startLine - 1, edit.endLine - edit.startLine + 1, ...edit.newContent.split('\n'))
-    return { targetPath, newContent: lines.join('\n') }
+    // For 'delete' action
+    if (edit.action === 'delete') {
+      return { targetPath, newContent: '' };
+    }
+
+    // For 'replace' action — SEARCH/REPLACE
+    const isNewFile = baseContent === undefined && !(targetPath in fileContents);
+    const currentContent = baseContent !== undefined ? baseContent : (fileContents[targetPath] ?? '');
+
+    if (isNewFile && edit.action === 'replace') {
+      return { targetPath, newContent: edit.replace ?? '' };
+    }
+
+    if (!edit.search) return null;
+
+    const normalizeLine = (l: string) => l.trim().replace(/[ \t]+/g, ' ');
+    const currentLines = currentContent.split('\n');
+    const searchLines = edit.search.split('\n');
+    const replaceLines = (edit.replace ?? '').split('\n');
+
+    // 1. Exact match attempt
+    if (currentContent.includes(edit.search)) {
+      return { targetPath, newContent: currentContent.replace(edit.search, edit.replace ?? '') }
+    }
+
+    // 2. Bulletproof fuzzy match (ignoring ALL blank lines and indentation)
+    const currentNonEmpty = currentLines
+      .map((line, idx) => ({ line: normalizeLine(line), idx }))
+      .filter(x => x.line.length > 0);
+
+    const searchNonEmpty = searchLines
+      .map(line => normalizeLine(line))
+      .filter(line => line.length > 0);
+
+    if (searchNonEmpty.length === 0) return null;
+
+    let matchOrigStart = -1;
+    let matchOrigEnd = -1;
+
+    for (let i = 0; i <= currentNonEmpty.length - searchNonEmpty.length; i++) {
+      let match = true;
+      for (let j = 0; j < searchNonEmpty.length; j++) {
+        if (currentNonEmpty[i + j].line !== searchNonEmpty[j]) {
+          match = false;
+          break;
+        }
+      }
+
+      if (match) {
+        matchOrigStart = currentNonEmpty[i].idx;
+        matchOrigEnd = currentNonEmpty[i + searchNonEmpty.length - 1].idx;
+        break;
+      }
+    }
+
+    if (matchOrigStart !== -1 && matchOrigEnd !== -1) {
+      const newLines = [
+        ...currentLines.slice(0, matchOrigStart),
+        ...replaceLines,
+        ...currentLines.slice(matchOrigEnd + 1)
+      ];
+      return { targetPath, newContent: newLines.join('\n') };
+    }
+
+    // Not found — return null to trigger error notification
+    return null;
   }, [fileContents, activeFilePath, folderPath]);
 
+  // ── Accept Single Edit ──
   const acceptEdit = useCallback(async (edit: AIEdit) => {
-
     const result = applyEditToContent(edit);
-    if (!result) return;
-
+    if (!result) {
+      // Notify user of failed SEARCH block
+      setMessages(prev => [...prev, {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: `⚠️ **Could not apply edit to \`${edit.file}\`**: The search text was not found in the file. The file may have changed since the AI generated this edit.`,
+      }]);
+      setPendingEdits(prev => prev.filter(e => e.id !== edit.id));
+      return;
+    }
     await writeFile(result.targetPath, result.newContent);
-
-    setAcceptedEdits((prev) => [...prev, edit.id])
-    setPendingEdits((prev) => prev.filter((e) => e.id !== edit.id))
-
+    setAcceptedEdits(prev => [...prev, edit.id])
+    setPendingEdits(prev => prev.filter(e => e.id !== edit.id))
   }, [applyEditToContent, writeFile])
 
   const rejectEdit = useCallback((edit: AIEdit) => {
-    setRejectedEdits((prev) => [...prev, edit.id])
-    setPendingEdits((prev) => prev.filter((e) => e.id !== edit.id))
+    setRejectedEdits(prev => [...prev, edit.id])
+    setPendingEdits(prev => prev.filter(e => e.id !== edit.id))
   }, [])
 
   const acceptAllEdits = useCallback(async () => {
-    for (const edit of pendingEdits) await acceptEdit(edit)
-  }, [pendingEdits, acceptEdit])
+    // Group edits by target path
+    const grouped = new Map<string, AIEdit[]>();
+    for (const edit of pendingEdits) {
+      const path = resolveTargetPath(edit.file, fileContents, activeFilePath, folderPath);
+      if (path) {
+        if (!grouped.has(path)) grouped.set(path, []);
+        grouped.get(path)!.push(edit);
+      }
+    }
+
+    // Apply all edits for each file
+    for (const [path, edits] of grouped.entries()) {
+      let currentContent = fileContents[path] ?? '';
+      const finishedIds: string[] = [];
+      const failed = [];
+
+      for (const edit of edits) {
+        const result = applyEditToContent(edit, currentContent);
+        if (result) {
+          currentContent = result.newContent;
+          finishedIds.push(edit.id);
+        } else {
+          failed.push(edit);
+        }
+      }
+
+      // Final write for this file
+      if (finishedIds.length > 0) {
+        await writeFile(path, currentContent);
+        setAcceptedEdits(prev => [...prev, ...finishedIds]);
+      }
+
+      // Handle failures
+      for (const edit of failed) {
+        setMessages(prev => [...prev, {
+          id: `error-${Date.now()}`,
+          role: 'assistant',
+          content: `⚠️ **Could not apply edit to \`${edit.file}\`**: ${edit.description || 'Search text not found.'}`,
+        }]);
+      }
+    }
+
+    setPendingEdits([]);
+  }, [pendingEdits, fileContents, activeFilePath, folderPath, applyEditToContent, writeFile])
 
   const rejectAllEdits = useCallback(() => {
     pendingEdits.forEach(rejectEdit)
@@ -129,8 +225,6 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
     const id = streamingMsgId.current
     streamingMsgId.current = null
     setIsStreaming(false)
-
-    // Remove the assistant's partial response
     if (id) {
       setMessages(prev => prev.filter(m => m.id !== id))
     }
@@ -144,19 +238,40 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
     window.electronAPI.onChatChunk((chunk: string) => {
       const id = streamingMsgId.current;
       if (!id) return;
-      setMessages((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, content: m.content + chunk } : m))
-      );
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, content: m.content + chunk } : m));
     });
 
-    window.electronAPI.onChatDone(async (response: AIResponse | null) => {
+    window.electronAPI.onChatDone(async (payload: AIResponsePayload) => {
       const id = streamingMsgId.current;
       streamingMsgId.current = null;
       setIsStreaming(false);
 
-      if (response?.edits?.length) {
-        // Automatically apply implementation_plan.md edits
-        const planEdit = response.edits.find(e => e.file.toLowerCase().includes('implementation_plan.md'));
+      if (!payload) return;
+
+      if (payload.type === 'questions') {
+        setMessages(prev => prev.map(m =>
+          m.id === id ? { ...m, content: '', questions: payload.questions, isStreaming: false } : m
+        ));
+        return;
+      }
+
+      if (payload.type === 'plan') {
+        // Auto-save the plan to implementation_plan.md
+        if (folderPath) {
+          const planPath = `${folderPath}\\implementation_plan.md`;
+          const planContent = `# Implementation Plan\n\n${payload.summary}\n\n## Files to Touch\n${payload.filesToTouch.map(f => `- \`${f}\``).join('\n')}`;
+          await writeFile(planPath, planContent);
+        }
+        setMessages(prev => prev.map(m =>
+          m.id === id ? { ...m, content: `📋 **Plan Created**\n\n${payload.summary}\n\n**Files:** ${payload.filesToTouch.join(', ')}\n\nType **"OK"** or **"تمام"** to execute.`, isStreaming: false } : m
+        ));
+        return;
+      }
+
+      if (payload.type === 'edits') {
+        const planEdit = payload.edits.find(e => e.file.toLowerCase().includes('implementation_plan.md'));
+
+        // Auto-apply plan files
         if (planEdit) {
           const result = applyEditToContent(planEdit);
           if (result) {
@@ -165,20 +280,17 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
           }
         }
 
-        setPendingEdits(response.edits.filter(e => e.id !== planEdit?.id))
+        const codeEdits = payload.edits.filter(e => e.id !== planEdit?.id);
+        setPendingEdits(codeEdits);
 
-        if (id) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === id
-                ? { ...m, content: response.explanation || m.content, edits: response.edits, isStreaming: false }
-                : m
-            )
-          )
-        }
+        setMessages(prev => prev.map(m =>
+          m.id === id
+            ? { ...m, content: payload.summary || m.content, edits: codeEdits, isStreaming: false }
+            : m
+        ));
       }
     })
-  }, [applyEditToContent, writeFile])
+  }, [applyEditToContent, writeFile, folderPath])
 
   return {
     aiModel, setAiModel,
@@ -248,19 +360,28 @@ function resolveTargetPath(
   activeFilePath: string | null,
   folderPath: string | null
 ): string | null {
-  // Match existing open file
-  const match = Object.keys(fileContents).find(
-    (p) => p === editFile || p.endsWith(editFile.replace(/\//g, '\\'))
-  )
-  if (match) return match
+  const normalizedEditFile = editFile.replace(/\//g, '\\');
+  const allPaths = Object.keys(fileContents);
 
-  // Match active file
-  if (activeFilePath && (activeFilePath === editFile || activeFilePath.endsWith(editFile.replace(/\//g, '\\')))) {
+  // 1. Exact match
+  if (fileContents[editFile]) return editFile;
+  if (fileContents[normalizedEditFile]) return normalizedEditFile;
+
+  // 2. Suffix match (e.g. AI says "src/App.tsx" and we have "D:\project\src\App.tsx")
+  const parts = normalizedEditFile.split('\\');
+  for (let i = 0; i < parts.length; i++) {
+    const suffix = parts.slice(i).join('\\');
+    const match = allPaths.find(p => p.endsWith(suffix));
+    if (match) return match;
+  }
+
+  // 3. Active file match fallback
+  if (activeFilePath && (activeFilePath === editFile || activeFilePath.endsWith(normalizedEditFile))) {
     return activeFilePath
   }
 
-  // New file — resolve relative to folder
+  // 4. New file — resolve relative to folder
   if (!folderPath) return null
   if (editFile.includes(':') || editFile.startsWith('/') || editFile.startsWith('\\')) return editFile
-  return `${folderPath}\\${editFile.replace(/\//g, '\\')}`
+  return `${folderPath}\\${normalizedEditFile}`
 }

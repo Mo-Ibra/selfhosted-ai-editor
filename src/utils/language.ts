@@ -1,3 +1,5 @@
+// ─── Language Utility ─────────────────────────────────────────────────────────
+
 const LANGUAGE_MAP: Record<string, string> = {
   ts: 'typescript', tsx: 'typescript',
   js: 'javascript', jsx: 'javascript',
@@ -11,6 +13,7 @@ const LANGUAGE_MAP: Record<string, string> = {
   rb: 'ruby', swift: 'swift', kt: 'kotlin',
 }
 
+// Get the language of a file based on its extension
 export function getLanguage(filePath: string | null): string {
   if (!filePath) return 'plaintext'
   const ext = filePath.split('.').pop()?.toLowerCase() ?? ''

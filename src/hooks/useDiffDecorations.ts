@@ -1,92 +1,70 @@
 // ─── Diff Decorations Hook ────────────────────────────────────────────────────
+// With SEARCH/REPLACE, we can't show decorations by line number.
+// Instead, we highlight the search text in the editor using a find-based approach.
 
 import { Monaco } from "@monaco-editor/react";
 import { AIEdit } from "../types";
 import { useEffect, useRef } from "react";
 
-/**
- * Applies diff decorations to the editor to show added/removed lines.
- * 
- * @param editorRef - Reference to the editor instance.
- * @param monacoRef - Reference to the Monaco instance.
- * @param pendingEdits - Array of pending edits to apply.
- * @param filePath - The path to the currently active file.
- */
 export function useDiffDecorations(
-  // Editor instance
   editorRef: React.MutableRefObject<any>,
-  // Monaco instance
   monacoRef: React.MutableRefObject<Monaco | null>,
-  // Pending edits
   pendingEdits: AIEdit[],
-  // Current file path
   filePath: string | null,
 ) {
   const decorationsRef = useRef<string[]>([]);
 
   useEffect(() => {
-
     const editor = editorRef.current;
     const monaco = monacoRef.current;
     if (!editor || !monaco) return;
 
     // Clear previous decorations
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, []);
-    if (pendingEdits.length === 0) return
+    if (pendingEdits.length === 0) return;
 
-    // Filter edits for the current file
+    // Filter edits for current file
     const fileEdits = pendingEdits.filter(
       (e) => e.file === filePath || filePath?.endsWith(e.file.replace(/\//g, '\\')),
-    );
+    ).filter(e => e.action === 'replace' && e.search);
 
-    // If no edits for the current file, return
     if (fileEdits.length === 0) return;
 
-    // Create decorations for each edit
-    const newDecorations = fileEdits.flatMap((edit) => {
-      const newLines = edit.newContent.split('\n')
-      const decorations: any[] = []
+    const model = editor.getModel();
+    if (!model) return;
 
-      // If there is old content, add a decoration for the removed lines
-      if (edit.oldContent) {
-        decorations.push({
-          range: new monaco.Range(edit.startLine, 1, edit.endLine, 1000),
-          options: {
-            isWholeLine: true,
-            className: 'diff-removed-line',
-            linesDecorationsClassName: 'diff-gutter-removed',
-            overviewRuler: {
-              color: '#f38ba8',
-              position: monaco.editor.OverviewRulerLane.Left,
-            },
-          }
-        });
-      }
+    const newDecorations: any[] = [];
 
-      // Add a decoration for the added lines
-      decorations.push({
-        range: new monaco.Range(edit.endLine, 1, edit.endLine, 1000),
+    for (const edit of fileEdits) {
+      if (!edit.search) continue;
+
+      // Find the search text in the model
+      const matches = model.findMatches(edit.search, false, false, true, null, false);
+      if (matches.length === 0) continue;
+
+      const match = matches[0];
+
+      // Highlight the matched (to-be-replaced) range in red
+      newDecorations.push({
+        range: match.range,
         options: {
-          isWholeLine: true,
-          after: {
-            content: `\n${newLines.map((l) => `+ ${l}`).join('\n')}`,
-            inlineClassName: 'diff-added-block',
-          },
+          isWholeLine: false,
+          className: 'diff-removed-line',
+          linesDecorationsClassName: 'diff-gutter-removed',
           overviewRuler: {
-            color: '#a6e3a1',
-            position: monaco.editor.OverviewRulerLane.Right,
+            color: '#f38ba8',
+            position: monaco.editor.OverviewRulerLane.Left,
           },
-        },
-      })
+        }
+      });
+    }
 
-      return decorations
-    });
+    decorationsRef.current = editor.deltaDecorations([], newDecorations);
 
-    // Apply the decorations
-    decorationsRef.current = editor.deltaDecorations([], newDecorations)
+    // Scroll to first decorated area
+    if (newDecorations.length > 0) {
+      editor.revealRangeInCenter(newDecorations[0].range);
+    }
 
-    // Scroll to the first edit like a camera lens
-    editor.revealLineInCenter(fileEdits[0].startLine)
-
-  }, [pendingEdits, filePath, editorRef, monacoRef])
+  }, [pendingEdits, filePath, editorRef, monacoRef]);
 }

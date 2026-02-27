@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { Monaco } from '@monaco-editor/react'
-import { AIEdit } from '../types'
 import { getLanguage } from "../utils/language";
 
 // ─── File Models Hook ─────────────────────────────────────────────────────────

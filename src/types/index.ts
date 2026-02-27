@@ -5,26 +5,51 @@ export interface FileNode {
   children?: FileNode[]
 }
 
+// ── AI Edit Types (SEARCH/REPLACE system) ──────────────────────────
+
 export interface AIEdit {
   id: string
   file: string
-  startLine: number
-  endLine: number
-  oldContent: string
-  newContent: string
+  action: 'replace' | 'create' | 'delete'
+  description?: string // NEW: Optional description for this specific edit
+  search?: string
+  replace?: string
+  content?: string
 }
 
 export interface AIResponse {
-  explanation: string
+  type: 'edits'
+  summary: string
   edits: AIEdit[]
 }
+
+export interface AIQuestions {
+  type: 'questions'
+  questions: string[]
+}
+
+export interface AIPlan {
+  type: 'plan'
+  summary: string
+  filesToTouch: string[]
+}
+
+export interface AIToolCall {
+  type: 'tool_call'
+  tool: 'read_file' | 'list_directory'
+  path: string
+}
+
+export type AIResponsePayload = AIResponse | AIQuestions | AIPlan | AIToolCall | null
 
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
   edits?: AIEdit[]
+  questions?: string[]
   isStreaming?: boolean
+  toolCalls?: { tool: string; path: string }[]
 }
 
 export interface OllamaPayload {

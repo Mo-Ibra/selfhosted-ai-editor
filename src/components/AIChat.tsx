@@ -92,24 +92,35 @@ export default function AIChat({
               {msg.isStreaming && <span className="cursor-blink" />}
             </div>
 
+            {/* Questions card */}
+            {msg.questions && msg.questions.length > 0 && (
+              <div className="chat-questions-card">
+                <div className="chat-questions-title">❓ Questions before proceeding:</div>
+                <ol className="chat-questions-list">
+                  {msg.questions.map((q, i) => <li key={i}>{q}</li>)}
+                </ol>
+              </div>
+            )}
+
             {msg.edits && msg.edits.length > 0 && (
               <div className="chat-message-edits">
                 {msg.edits.map((edit) => {
                   const isAccepted = acceptedEdits.includes(edit.id)
                   const isRejected = rejectedEdits.includes(edit.id)
                   const fileName = edit.file.split('\\').pop()?.split('/').pop() ?? edit.file
+                  const actionLabel = edit.action === 'create' ? '🆕 Create' : edit.action === 'delete' ? '🗑️ Delete' : '✏️ Edit'
                   return (
                     <div
                       key={edit.id}
                       className={`chat-edit-item ${isAccepted ? 'accepted' : ''} ${isRejected ? 'rejected' : ''}`}
                     >
                       <span className="chat-edit-icon">
-                        {isAccepted ? '✅' : isRejected ? '❌' : '📝'}
+                        {isAccepted ? '✅' : isRejected ? '❌' : actionLabel}
                       </span>
                       <div className="chat-edit-info">
                         <div className="chat-edit-file">{fileName}</div>
-                        <div className="chat-edit-lines">
-                          Lines {edit.startLine}–{edit.endLine}
+                        <div className="chat-edit-desc">
+                          {edit.description || (edit.action === 'replace' ? 'Search & Replace' : edit.action === 'create' ? 'New file' : 'Delete file')}
                         </div>
                       </div>
                       {!isAccepted && !isRejected && (

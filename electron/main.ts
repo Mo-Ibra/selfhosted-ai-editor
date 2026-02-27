@@ -207,148 +207,248 @@ ipcMain.handle('ai:chat', async (event, payload: {
 
   const selectionContext = selectedCode
     ? `\n<selected_code line_start="${selectedCode.startLine}" line_end="${selectedCode.endLine}">\n${selectedCode.content}\n</selected_code>`
-    : ''
+    : '';
 
-  const systemPrompt = `You are an expert AI code editor assistant embedded in a desktop IDE.
-Your goal is to provide extremely high-precision edits. Follow these instructions carefully:
+  const systemPrompt = `You are an expert AI code editor embedded in a desktop IDE. You are an AGENT — you must think before acting, ask clarifying questions, propose plans, and execute changes precisely.
 
-1. **Three-Phase Workflow**:
-   - **Phase 1: Planning**: For any complex, multi-file, or architectural task, you MUST first propose an \`implementation_plan.md\` file in the project root. Explain your steps clearly in this file.
-   - **Phase 1.1: Verification**: You can ask questions if anything is unclear before making the plan.
-   - **Phase 2: Approval**: After providing the plan, you MUST wait for the user to say "OK", "Execute", "تمام", or similar approval before providing code edits.
-   - **Phase 3: Execution**: Once approved, provide the high-precision JSON edits to the actual code files.
+---
+## TOOLS AVAILABLE
+You can call these tools by responding with a tool_call JSON (see format below):
+- **read_file**: Read the content of a file you need to inspect.
+- **list_directory**: List files/folders inside a path.
 
-2. **Self-Correction & Thinking**: Before providing any JSON edits or plans, use a <thought> block to:
-   - Analyze the request.
-   - Map the changes to the provided file content.
-   - VERIFY the line numbers (1-indexed).
-   - CHECK for potential syntax errors in your proposed code.
-   - Ensure the new code integrates perfectly with the surrounding context.
+---
+## RESPONSE PROTOCOL — You MUST output exactly ONE of these formats per response:
 
-3. **Context Awareness**:
+### 1. QUESTIONS (ask before acting on ambiguous or large requests)
+\`\`\`json
+{ "type": "questions", "questions": ["Question 1?", "Question 2?"] }
+\`\`\`
+
+### 2. PLAN (after questions are answered, propose a plan and wait for approval)
+\`\`\`json
+{ "type": "plan", "summary": "What you intend to do and why", "files_to_touch": ["src/App.tsx", "src/utils.ts"] }
+\`\`\`
+→ After the user says "OK", "تمام", "نفذ", or "execute", proceed with edits.
+
+### 3. TOOL CALL (read a file or list a directory you need)
+\`\`\`json
+{ "type": "tool_call", "tool": "read_file", "path": "src/App.tsx" }
+\`\`\`
+→ The result will be injected automatically — then you can continue.
+
+### 4. EDITS (SEARCH/REPLACE — the actual code changes)
+\`\`\`xml
+<edits summary="Brief summary of what was changed">
+<edit file="src/App.tsx" action="replace" description="Add async support to login">
+<<<< SEARCH
+exact existing code to find
+==== REPLACE
+new replacement code
+>>>> END
+</edit>
+</edits>
+\`\`\`
+
+**SEARCH/REPLACE RULES:**
+- **Description**: ALWAYS include a \`description\` attribute in the \`<edit>\` tag (e.g., \`description="Fix bug X"\`).
+- **File Path**: Use the EXACT path from the file tree. Double check if you are editing \`Editor.tsx\` vs \`ChatPane.tsx\`. Do NOT repeat the same file name for different files.
+- **Precision**: The SEARCH block MUST be an EXACT copy of the existing code.
+- **Multiple Edits**: If you need to make multiple changes to the same file, you can use multiple \`<edit>\` tags for that file.
+- **Context**: Include 2-3 surrounding lines to make the search unique.
+
+### 5. PLAIN TEXT (for explanations, small answers, status updates)
+Just write normal text — no JSON or XML.
+
+---
+## WORKFLOW RULES:
+1. For SIMPLE requests (< 5 lines change, single file): Skip questions & plan. Go straight to EDITS.
+2. For COMPLEX requests (multiple files, architecture changes): Ask → Plan → Edits.
+3. If you need to read a file before you can write edits: Use TOOL CALL first.
+4. NEVER use line numbers. ALWAYS use SEARCH/REPLACE.
+5. NEVER truncate code. Write complete, working replacements.
+
+---
+## CONTEXT:
 <project_file_tree>
 ${fileTreeStr}
 </project_file_tree>
 ${pinnedContext ? `\n<pinned_files>${pinnedContext}</pinned_files>` : ''}
 <active_file path="${activeFilePath}">
 ${activeFile}
-</active_file>${selectionContext}
+</active_file>${selectionContext}`
 
-4. **Output Format**:
-- If you are making edits (including the plan), YOU MUST respond with:
-  <thought>
-  (Your reasoning and verification process here)
-  </thought>
-  {
-    "explanation": "Brief description of changes",
-    "edits": [
-      {
-        "file": "${activeFilePath}",
-        "startLine": 10,
-        "endLine": 12,
-        "newContent": "..."
+  // ── Build conversation messages ──
+  const conversationMessages = [
+    { role: 'system', content: systemPrompt },
+    ...history,
+  ]
+
+  // ── Agentic loop: run until we get a final response (edits or plain text) ──
+  const runAgenticLoop = async (msgs: { role: string; content: string }[]): Promise<void> => {
+    const requestBody = JSON.stringify({
+      model: model || 'qwen3-coder:480b-cloud',
+      messages: msgs,
+      stream: true,
+    })
+
+    return new Promise<void>((resolve, reject) => {
+      const options = {
+        hostname: 'localhost',
+        port: 11434,
+        path: '/api/chat',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(requestBody),
+        },
       }
-    ]
-  }
 
-- If you are creating a new file (like implementation_plan.md), set startLine and endLine to 0.
+      let fullResponse = ''
 
-- If you are JUST talking, simply respond in plain text.
+      if (activeChatRequest) activeChatRequest.destroy()
 
-5. **Critical Precision Rules**:
-- **Line Numbers**: Match the lines EXACTLY from the <active_file> block.
-- **Minimal Edits**: Only replace the necessary lines.
-- **No Hallucinations**: Do not reference code that isn't in the provided blocks.
-- **Syntax**: Ensure the generated code is valid. If it's TypeScript, follow TS rules.
-- **File Creation**: Use the full path relative to the root (e.g., "implementation_plan.md").`
-
-  const requestBody = JSON.stringify({
-    model: model || 'qwen3-coder:480b-cloud',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...history,
-    ],
-    stream: true,
-  })
-
-  return new Promise<void>((resolve, reject) => {
-    const options = {
-      hostname: 'localhost',
-      port: 11434,
-      path: '/api/chat',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(requestBody),
-      },
-    }
-
-    let fullResponse = ''
-
-    if (activeChatRequest) activeChatRequest.destroy()
-
-    const req = http.request(options, (res) => {
-      activeChatRequest = req
-      res.on('data', (chunk: Buffer) => {
-        const lines = chunk.toString().split('\n').filter(Boolean)
-        for (const line of lines) {
-          try {
-            const parsed = JSON.parse(line)
-            const token = parsed?.message?.content ?? ''
-            if (token) {
-              fullResponse += token
-              event.sender.send('ai:chunk', token)
-            }
-            if (parsed.done) {
-              // Try to parse as JSON edit response
-              const trimmed = fullResponse.trim()
-              let aiResponse = null
-              // Extract JSON if wrapped in markdown code block
-              const jsonMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/)
-                || trimmed.match(/(\{[\s\S]*\})/)
-              if (jsonMatch) {
-                try {
-                  const parsed2 = JSON.parse(jsonMatch[1] || jsonMatch[0])
-                  if (parsed2.edits && Array.isArray(parsed2.edits)) {
-                    // Add unique IDs to edits
-                    aiResponse = {
-                      explanation: parsed2.explanation || '',
-                      edits: parsed2.edits.map((e: object, i: number) => ({
-                        id: `edit-${Date.now()}-${i}`,
-                        ...e,
-                      })),
-                    }
-                  }
-                } catch { /* not a JSON edit */ }
+      const req = http.request(options, (res) => {
+        activeChatRequest = req
+        res.on('data', (chunk: Buffer) => {
+          const lines = chunk.toString().split('\n').filter(Boolean)
+          for (const line of lines) {
+            try {
+              const parsed = JSON.parse(line)
+              const token = parsed?.message?.content ?? ''
+              if (token) {
+                fullResponse += token
+                event.sender.send('ai:chunk', token)
               }
-              event.sender.send('ai:done', aiResponse)
-              resolve()
-            }
-          } catch { /* skip malformed */ }
-        }
+              if (parsed.done) {
+                const payload = parseAgentResponse(fullResponse)
+
+                if (payload?.type === 'tool_call') {
+                  // Execute tool and loop
+                  handleToolCall(payload, msgs).then(resolve).catch(reject)
+                } else {
+                  event.sender.send('ai:done', payload)
+                  resolve()
+                }
+              }
+            } catch { /* skip malformed */ }
+          }
+        })
+
+        res.on('end', () => { activeChatRequest = null })
+        res.on('error', (err) => {
+          activeChatRequest = null
+          event.sender.send('ai:done', null)
+          reject(err)
+        })
       })
 
-      res.on('end', () => {
-        activeChatRequest = null
-      })
-
-      res.on('error', (err) => {
+      req.on('error', (err) => {
         activeChatRequest = null
         event.sender.send('ai:done', null)
         reject(err)
       })
-    })
 
-    req.on('error', (err) => {
-      activeChatRequest = null
-      event.sender.send('ai:done', null)
-      reject(err)
+      req.write(requestBody)
+      req.end()
     })
+  }
 
-    req.write(requestBody)
-    req.end()
-  })
+  // ── Handle Tool Calls ──
+  const handleToolCall = async (tool: { type: string; tool: string; path: string }, msgs: { role: string; content: string }[]): Promise<void> => {
+    let toolResult = ''
+    try {
+      if (tool.tool === 'read_file') {
+        const rootPath = payload.fileTreeNodes[0]?.path
+        const basePath = rootPath ? (fs.statSync(rootPath).isDirectory() ? rootPath : path.dirname(rootPath)) : '';
+        const fullPath = (tool.path.includes(':') || tool.path.startsWith('\\'))
+          ? tool.path
+          : path.join(basePath, tool.path);
+
+        toolResult = fs.existsSync(fullPath) ? fs.readFileSync(fullPath, 'utf-8') : `File not found: ${tool.path} (Calculated: ${fullPath})`;
+      } else if (tool.tool === 'list_directory') {
+        const rootPath = payload.fileTreeNodes[0]?.path
+        const basePath = rootPath ? (fs.statSync(rootPath).isDirectory() ? rootPath : path.dirname(rootPath)) : '';
+        const fullPath = (tool.path.includes(':') || tool.path.startsWith('\\'))
+          ? tool.path
+          : path.join(basePath, tool.path);
+        const entries = fs.existsSync(fullPath) ? fs.readdirSync(fullPath).join('\n') : `Directory not found: ${tool.path}`;
+        toolResult = entries
+      }
+    } catch (e) {
+      toolResult = `Error reading ${tool.path}: ${String(e)}`
+    }
+
+    // Notify user of tool execution (as a chunk)
+    event.sender.send('ai:chunk', `\n\`\`\`tool\n🔍 Reading \`${tool.path}\`...\n\`\`\`\n`)
+
+    // Add tool result to messages and loop
+    const newMsgs = [
+      ...msgs,
+      { role: 'assistant', content: JSON.stringify({ type: 'tool_call', tool: tool.tool, path: tool.path }) },
+      { role: 'user', content: `<tool_result tool="${tool.tool}" path="${tool.path}">\n${toolResult}\n</tool_result>` },
+    ]
+    return runAgenticLoop(newMsgs)
+  }
+
+  return runAgenticLoop(conversationMessages)
 })
+
+// ── Parse Agent Response ────────────────────────────────────────────
+function parseAgentResponse(rawText: string): any {
+  const trimmed = rawText.trim()
+
+  // Try JSON block (questions / plan / tool_call)
+  const jsonMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)
+    || trimmed.match(/(\{[\s\S]*\})/);
+
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0])
+      if (['questions', 'plan', 'tool_call'].includes(parsed.type)) {
+        // Normalize plan fields
+        if (parsed.type === 'plan') {
+          parsed.filesToTouch = parsed.files_to_touch || parsed.filesToTouch || []
+        }
+        return parsed
+      }
+    } catch { /* not JSON */ }
+  }
+
+  // Try XML edits block
+  const editsMatch = trimmed.match(/<edits[^>]*summary="([^"]*)"[^>]*>([\s\S]*?)<\/edits>/)
+    || trimmed.match(/<edits>([\s\S]*?)<\/edits>/)
+
+  if (editsMatch) {
+    const summary = editsMatch[1] || ''
+    const editsContent = editsMatch[2] || editsMatch[1] || ''
+    const editBlocks = [...editsContent.matchAll(/<edit\s+file="([^"]+)"\s+action="([^"]+)"(?:\s+description="([^"]*)")?[^>]*>([\s\S]*?)<\/edit>/g)]
+
+    const edits = editBlocks.map((match, i) => {
+      const file = match[1]
+      const action = match[2] as 'replace' | 'create' | 'delete'
+      const description = match[3] || ''
+      const body = match[4].trim()
+
+      if (action === 'create') {
+        return { id: `edit-${Date.now()}-${i}`, file, action, description, content: body }
+      }
+
+      // Parse SEARCH/REPLACE (relaxed for newlines and arrows)
+      const srMatch = body.match(/<{3,}\s*SEARCH\s*([\s\S]*?)\s*={3,}\s*REPLACE\s*([\s\S]*?)\s*>{3,}\s*(?:END|REPLACE)/i)
+      if (srMatch) {
+        return { id: `edit-${Date.now()}-${i}`, file, action: 'replace' as const, description, search: srMatch[1].trim(), replace: srMatch[2].trim() }
+      }
+
+      return { id: `edit-${Date.now()}-${i}`, file, action, description, content: body }
+    })
+
+    return { type: 'edits', summary, edits }
+  }
+
+  // Plain text — return null so the streamed content is shown as-is
+  return null
+}
 
 ipcMain.handle('ai:complete', async (_event, payload: {
   prefix: string

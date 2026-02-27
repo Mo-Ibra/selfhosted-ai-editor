@@ -796,12 +796,19 @@ body,
 }
 
 .chat-edit-file {
-  font-size: 11px;
+  font-size: 10px;
+  color: var(--text-muted);
   font-family: var(--font-mono);
-  color: var(--text-accent);
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.chat-edit-desc {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .chat-edit-lines {
@@ -846,6 +853,38 @@ body,
   50% {
     opacity: 0;
   }
+}
+
+.chat-questions-card {
+  margin: 12px 0;
+  padding: 14px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(137, 180, 250, 0.2);
+  border-radius: var(--radius);
+  animation: slideUp 0.3s ease-out;
+}
+
+.chat-questions-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-questions-list {
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-questions-list li {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.4;
 }
 
 .chat-footer {
