@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { menuItems } from "../utils/menu";
+import { menuItems } from "../utils/menu-items";
 
 function MenuBar() {
 
