@@ -1,4 +1,5 @@
 import { Monaco } from '@monaco-editor/react'
+import { MutableRefObject } from 'react'
 
 // Constants for autocompletion (can be changed in the future)
 const AUTOCOMPLETE_DELAY_MS = 350
@@ -9,15 +10,25 @@ const AUTOCOMPLETE_LANGUAGES = [
 const AI_MODEL = 'qwen3-coder:480b-cloud'
 const CONTEXT_LINES = 50
 
-export function registerAutocompleteProvider(monaco: Monaco, editor: any) {
+export function registerAutocompleteProvider(
+  monaco: Monaco,
+  editor: any,
+  enabledRef?: MutableRefObject<boolean>
+) {
   // Timer for debouncing autocompletion requests
   let typingTimer: ReturnType<typeof setTimeout> | null = null
+
 
   // Register inline completions provider for AI-powered autocompletion
   const provider = monaco.languages.registerInlineCompletionsProvider(
     AUTOCOMPLETE_LANGUAGES,
     {
       provideInlineCompletions: async (model: any, position: any) => {
+
+        // Bail out immediately if autocomplete is disabled via Settings
+        if (enabledRef && !enabledRef.current) {
+          return { items: [] }
+        }
 
         // If the user is typing fast, clear the previous timer
         if (typingTimer) clearTimeout(typingTimer)

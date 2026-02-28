@@ -2,7 +2,11 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { menuItems } from "../utils/menu-items";
 import { useApp } from "../AppProvider";
 
-function MenuBar() {
+interface MenuBarProps {
+  onOpenSettings?: () => void;
+}
+
+function MenuBar({ onOpenSettings }: MenuBarProps) {
   const { zoomIn, zoomOut, resetZoom } = useApp();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -12,6 +16,7 @@ function MenuBar() {
     zoomIn,
     zoomOut,
     resetZoom,
+    openSettings: () => onOpenSettings?.(),
   };
 
   // ── Dispatch a named action ───────────────────────────────────────
@@ -21,7 +26,7 @@ function MenuBar() {
         actionHandlers[action]();
       }
     },
-    [zoomIn, zoomOut, resetZoom]
+    [zoomIn, zoomOut, resetZoom, onOpenSettings]
   );
 
   // ── Close dropdown when clicking outside ─────────────────────────
@@ -57,6 +62,12 @@ function MenuBar() {
       if (e.key === "0") {
         e.preventDefault();
         resetZoom();
+        return;
+      }
+      // Settings: Ctrl+,
+      if (e.key === ",") {
+        e.preventDefault();
+        onOpenSettings?.();
         return;
       }
     };

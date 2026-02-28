@@ -59,7 +59,7 @@ export const menuItems: MenuGroup[] = [
   {
     label: "Settings",
     items: [
-      { label: "Preferences", shortcut: "Ctrl+,", icon: "⚙" },
+      { label: "Preferences", shortcut: "Ctrl+,", icon: "⚙", action: "openSettings" },
       { label: "AI Model Config", icon: "🧠" },
       { divider: true, label: "" },
       { label: "Keyboard Shortcuts", shortcut: "Ctrl+K Ctrl+S", icon: "⌨" },

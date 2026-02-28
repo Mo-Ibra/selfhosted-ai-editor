@@ -1,17 +1,33 @@
 import { useApp } from "../AppProvider";
+import { useEffect, useState } from "react";
 import MainLayout from "./MainLayout";
 import MenuBar from "./MenuBar";
+import SettingsPage from "./SettingsPage";
 import TitleBar from "./TitleBar";
 import WelcomeScreen from "./WelcomeScreen";
 
 function AppShell() {
   const { folderPath } = useApp()
+  const [showSettings, setShowSettings] = useState(false)
+
+  // Close settings on Escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowSettings(false)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
 
   return (
     <div className="app">
       <TitleBar />
-      <MenuBar />
-      {folderPath ? <MainLayout /> : <WelcomeScreen />}
+      <MenuBar onOpenSettings={() => setShowSettings(true)} />
+
+      <div style={{ flex: 1, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
+        {folderPath ? <MainLayout /> : <WelcomeScreen />}
+        {showSettings && <SettingsPage onClose={() => setShowSettings(false)} />}
+      </div>
     </div>
   )
 }

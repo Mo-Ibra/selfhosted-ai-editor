@@ -61,10 +61,13 @@ export default function Editor({
   onSave,
   onSelectionChange,
 }: EditorProps) {
-  const { editorFontSize, editorLineHeight } = useApp()
+  const { editorFontSize, editorLineHeight, settings } = useApp()
   const editorRef = useRef<any>(null)
   const onSaveRef = useRef(onSave)
   const folderPathRef = useRef(folderPath)
+  // Ref so the autocomplete provider always reads the latest value without re-registering
+  const autoCompleteEnabledRef = useRef(settings.autoCompletion)
+  autoCompleteEnabledRef.current = settings.autoCompletion
   const [currentEditIndex] = useState(0);
 
   // Update save function ref without causing re-renders
@@ -105,7 +108,7 @@ export default function Editor({
 
     editorRef.current = editor;
     configureMonaco(monaco);
-    registerAutocompleteProvider(monaco, editor);
+    registerAutocompleteProvider(monaco, editor, autoCompleteEnabledRef);
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       onSaveRef.current();
