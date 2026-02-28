@@ -56,7 +56,7 @@ function Section({
 }
 
 // ─── Main Settings Page ───────────────────────────────────────────────────────
-function SettingsPage({ onClose }: { onClose: () => void }) {
+function SettingsScreen({ onClose }: { onClose: () => void }) {
   const { settings, updateSetting } = useApp();
 
   return (
@@ -119,4 +119,4 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
   );
 }
 
-export default SettingsPage;
+export default SettingsScreen;

@@ -1,6 +1,6 @@
-import ChatPane from "./ChatPane";
-import EditorPane from "./EditorPane";
-import Sidebar from "./Sidebar";
+import ChatPane from "../components/ChatPane";
+import EditorPane from "../components/EditorPane";
+import Sidebar from "../components/Sidebar";
 
 function MainLayout() {
   return (
