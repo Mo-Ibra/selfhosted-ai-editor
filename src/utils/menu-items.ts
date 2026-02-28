@@ -1,12 +1,13 @@
-interface MenuItem {
+export interface MenuItem {
   label: string;
   shortcut?: string;
   divider?: boolean;
   disabled?: boolean;
   icon?: string;
+  action?: string;
 }
 
-interface MenuGroup {
+export interface MenuGroup {
   label: string;
   items: MenuItem[];
 }
@@ -48,9 +49,9 @@ export const menuItems: MenuGroup[] = [
       { label: "Explorer", shortcut: "Ctrl+Shift+E", icon: "📁" },
       { label: "AI Chat", shortcut: "Ctrl+Shift+A", icon: "🤖" },
       { divider: true, label: "" },
-      { label: "Zoom In", shortcut: "Ctrl+=", icon: "🔍" },
-      { label: "Zoom Out", shortcut: "Ctrl+-", icon: "🔎" },
-      { label: "Reset Zoom", shortcut: "Ctrl+0", icon: "⊙" },
+      { label: "Zoom In", shortcut: "Ctrl+=", icon: "🔍", action: "zoomIn" },
+      { label: "Zoom Out", shortcut: "Ctrl+-", icon: "🔎", action: "zoomOut" },
+      { label: "Reset Zoom", shortcut: "Ctrl+0", icon: "⊙", action: "resetZoom" },
       { divider: true, label: "" },
       { label: "Toggle Full Screen", shortcut: "F11", icon: "⛶" },
     ],

@@ -7,10 +7,10 @@ import { useFileModels } from '../hooks/useFileModels';
 import { useDiffDecorations } from '../hooks/useDiffDecorations';
 import { registerAutocompleteProvider } from '../hooks/useAutoComplete'
 import { DiffActions } from './DiffActions'
+import { useApp } from '../AppProvider'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const EDITOR_OPTIONS = {
-  fontSize: 14,
+const BASE_EDITOR_OPTIONS = {
   fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
   fontLigatures: true,
   lineHeight: 22,
@@ -61,7 +61,7 @@ export default function Editor({
   onSave,
   onSelectionChange,
 }: EditorProps) {
-
+  const { editorFontSize, editorLineHeight } = useApp()
   const editorRef = useRef<any>(null)
   const onSaveRef = useRef(onSave)
   const folderPathRef = useRef(folderPath)
@@ -144,7 +144,7 @@ export default function Editor({
           theme="vs-dark"
           onMount={handleMount}
           onChange={(val) => onContentChange(val ?? '')}
-          options={EDITOR_OPTIONS}
+          options={{ ...BASE_EDITOR_OPTIONS, fontSize: editorFontSize, lineHeight: editorLineHeight }}
         />
 
         {hasEditsForCurrentFile && (

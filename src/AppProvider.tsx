@@ -3,13 +3,15 @@ import { useTerminal } from "./hooks/useTerminal";
 import { useFileSystem } from "./hooks/useFileSystem";
 import { useEditor } from "./hooks/useEditor";
 import { useAIChat } from "./hooks/useAIChat";
+import { useZoom } from "./hooks/useZoom";
 
 // ─── Context Type (composed from all hooks) ───
 export type AppContextValue =
   ReturnType<typeof useFileSystem> &
   ReturnType<typeof useEditor> &
   ReturnType<typeof useTerminal> &
-  ReturnType<typeof useAIChat>
+  ReturnType<typeof useAIChat> &
+  ReturnType<typeof useZoom>
 
 // ─── Context ───
 const AppContext = createContext<AppContextValue | null>(null);
@@ -26,6 +28,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const editor = useEditor({ fileContents: fs.fileContents, updateFileContent: fs.updateFileContent, writeFile: fs.writeFile, readFile: fs.readFile })
   const terminal = useTerminal();
   const chat = useAIChat({ folderPath: fs.folderPath, fileTree: fs.fileTree, fileContents: fs.fileContents, activeFilePath: editor.activeFilePath, pinnedFiles: editor.pinnedFiles, readFile: fs.readFile, writeFile: fs.writeFile })
+  const zoom = useZoom();
 
   // ── Composed action: reset all state on folder open ──────────────
   const openFolder = useCallback(async () => {
@@ -37,7 +40,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fs.openFolder, editor.reset, chat.resetChat]);
 
   return (
-    <AppContext.Provider value={{ ...fs, ...editor, ...terminal, ...chat, openFolder }}>
+    <AppContext.Provider value={{ ...fs, ...editor, ...terminal, ...chat, ...zoom, openFolder }}>
       {children}
     </AppContext.Provider>
   )
