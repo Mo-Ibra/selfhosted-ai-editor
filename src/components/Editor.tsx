@@ -144,8 +144,9 @@ export default function Editor({
           path={filePath.replace(/\\/g, '/')}
           value={content}
           language={getLanguage(filePath)}
-          theme="vs-dark"
+          theme={settings.theme === 'light' ? 'vs-light' : 'vs-dark'}
           onMount={handleMount}
+
           onChange={(val) => onContentChange(val ?? '')}
           options={{ ...BASE_EDITOR_OPTIONS, fontSize: editorFontSize, lineHeight: editorLineHeight }}
         />

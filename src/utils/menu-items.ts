@@ -63,7 +63,6 @@ export const menuItems: MenuGroup[] = [
       { label: "AI Model Config", icon: "🧠" },
       { divider: true, label: "" },
       { label: "Keyboard Shortcuts", shortcut: "Ctrl+K Ctrl+S", icon: "⌨" },
-      { label: "Color Theme", icon: "🎨" },
       { divider: true, label: "" },
       { label: "About AI Editor", icon: "ℹ" },
     ],

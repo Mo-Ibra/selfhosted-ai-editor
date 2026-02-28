@@ -7,7 +7,7 @@ import TitleBar from "./TitleBar";
 import WelcomeScreen from "./WelcomeScreen";
 
 function AppShell() {
-  const { folderPath } = useApp()
+  const { folderPath, settings } = useApp()
   const [showSettings, setShowSettings] = useState(false)
 
   // Close settings on Escape
@@ -20,7 +20,8 @@ function AppShell() {
   }, [])
 
   return (
-    <div className="app">
+    <div className="app" data-theme={settings.theme}>
+
       <TitleBar />
       <MenuBar onOpenSettings={() => setShowSettings(true)} />
 

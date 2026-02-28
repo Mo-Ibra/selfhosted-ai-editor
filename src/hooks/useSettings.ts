@@ -2,12 +2,15 @@ import { useState, useCallback } from "react";
 
 export interface EditorSettings {
   autoCompletion: boolean;
+  theme: 'catppuccin' | 'midnight' | 'monokai' | 'light';
   // future settings go here...
 }
 
 const DEFAULT_SETTINGS: EditorSettings = {
   autoCompletion: true,
+  theme: 'catppuccin',
 };
+
 
 export function useSettings() {
   const [settings, setSettings] = useState<EditorSettings>(DEFAULT_SETTINGS);

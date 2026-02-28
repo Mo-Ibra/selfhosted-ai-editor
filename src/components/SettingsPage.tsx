@@ -77,6 +77,25 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
 
         {/* Content */}
         <div className="settings-content">
+          {/* ── Visuals ── */}
+          <Section title="Appearance" icon="🎨">
+            <div className="settings-theme-grid">
+              {(['catppuccin', 'midnight', 'monokai', 'light'] as const).map((t) => (
+                <div
+                  key={t}
+                  className={`theme-option ${settings.theme === t ? 'active' : ''}`}
+                  onClick={() => updateSetting('theme', t)}
+                >
+                  <div className={`theme-preview ${t}`}>
+                    <div className="preview-dot primary" />
+                    <div className="preview-dot accent" />
+                  </div>
+                  <span className="theme-name">{t.charAt(0).toUpperCase() + t.slice(1)}</span>
+                </div>
+              ))}
+            </div>
+          </Section>
+
           {/* ── Editor ── */}
           <Section title="Editor" icon="✏️">
             <ToggleRow
@@ -87,6 +106,7 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
             />
           </Section>
         </div>
+
 
         {/* Footer */}
         <div className="settings-footer">
