@@ -12,6 +12,8 @@ interface AIChatProps {
   rejectedEdits: string[]
   aiModel: string
   selectedCode: { content: string; startLine: number; endLine: number } | null
+  webSearch: boolean
+  setWebSearch: (val: boolean) => void
   onStop: () => void
 }
 
@@ -25,6 +27,8 @@ export default function AIChat({
   rejectedEdits,
   aiModel,
   selectedCode,
+  webSearch,
+  setWebSearch,
   onStop,
 }: AIChatProps) {
   const [input, setInput] = useState('')
@@ -165,6 +169,13 @@ export default function AIChat({
           />
           <div className="chat-input-actions">
             <span className="chat-hint">Enter to send · Shift+Enter for newline · Use @filename to mention files</span>
+            <button
+              className={`btn-web-search ${webSearch ? 'active' : ''}`}
+              onClick={() => setWebSearch(!webSearch)}
+              title={webSearch ? "Web Search Enabled" : "Enable Web Search"}
+            >
+              🌐
+            </button>
             <button
               className="btn-send"
               onClick={handleSend}

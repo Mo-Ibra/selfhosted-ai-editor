@@ -1151,6 +1151,41 @@ body,
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  /* Added gap for the buttons */
+}
+
+.chat-input-actions>.btn-send,
+.chat-input-actions>.btn-stop {
+  margin-left: auto;
+  /* Pushes Send/Stop to the right if needed, though flex container handles it */
+}
+
+.btn-web-search {
+  padding: 6px 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-web-search:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-light);
+}
+
+.btn-web-search.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-dim);
 }
 
 .chat-hint {

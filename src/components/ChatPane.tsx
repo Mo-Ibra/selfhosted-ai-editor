@@ -5,6 +5,7 @@ function ChatPane() {
   const {
     messages, isStreaming, aiModel, selectedCode,
     acceptedEdits, rejectedEdits,
+    webSearch, setWebSearch,
     sendMessage, acceptEdit, rejectEdit, stopChat
   } = useApp()
 
@@ -20,6 +21,8 @@ function ChatPane() {
       rejectedEdits={rejectedEdits}
       aiModel={aiModel}
       selectedCode={selectedCode}
+      webSearch={webSearch}
+      setWebSearch={setWebSearch}
     />
   )
 }

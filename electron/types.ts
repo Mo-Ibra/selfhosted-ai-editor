@@ -12,6 +12,7 @@ export interface ChatPayload {
   pinnedFiles: { path: string; content: string }[]
   history: { role: 'user' | 'assistant'; content: string }[]
   model: string
+  webSearch?: boolean
   selectedCode?: { content: string; startLine: number; endLine: number }
 }
 

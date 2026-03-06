@@ -13,6 +13,7 @@ import { lstat, stat, readdir, realpath, open } from "node:fs/promises";
 import { Readable } from "node:stream";
 import os, { type } from "node:os";
 import http from "node:http";
+import https from "node:https";
 import { createRequire } from "node:module";
 const EntryTypes = {
   FILE_TYPE: "files",
@@ -1906,6 +1907,7 @@ ${payload.selectedCode.content}
 ## TOOLS AVAILABLE
 - **read_file**: Read the content of a file you need to inspect.
 - **list_directory**: List files/folders inside a path.
+${payload.webSearch ? `- **search_web**: Search the internet for up-to-date information. Use to answer questions outside your training data.` : ""}
 
 ---
 ## RESPONSE PROTOCOL — Output exactly ONE of these formats per response:
@@ -1925,6 +1927,7 @@ ${payload.selectedCode.content}
 \`\`\`json
 { "type": "tool_call", "tool": "read_file", "path": "src/App.tsx" }
 \`\`\`
+*(For \`search_web\`, replace \`path\` with \`query\`)*
 
 ### 4. EDITS (SEARCH/REPLACE)
 \`\`\`xml
@@ -1969,7 +1972,10 @@ function resolveRelativePath(toolPath, fileTreeNodes) {
   const base = fs$1.statSync(root.path).isDirectory() ? root.path : sp__default.dirname(root.path);
   return sp__default.join(base, toolPath);
 }
-function executeTool(tool, toolPath, fileTreeNodes) {
+async function executeTool(tool, toolPath, fileTreeNodes) {
+  if (tool === "search_web") {
+    return await searchWeb(toolPath);
+  }
   const fullPath = resolveRelativePath(toolPath, fileTreeNodes);
   try {
     if (tool === "read_file") {
@@ -2008,24 +2014,38 @@ async function runAgenticLoop(event, msgs, model, fileTreeNodes) {
             if (!parsed.done) return;
             const agentPayload = parseAgentResponse(fullResponse);
             if ((agentPayload == null ? void 0 : agentPayload.type) === "tool_call") {
-              const result = executeTool(agentPayload.tool, agentPayload.path, fileTreeNodes);
-              event.sender.send("ai:chunk", `
+              const queryOrPath = agentPayload.query || agentPayload.path || "";
+              const statusMsg = agentPayload.tool === "search_web" ? `
 \`\`\`tool
-🔍 Reading \`${agentPayload.path}\`...
+🌐 Searching web for \`${queryOrPath}\`...
 \`\`\`
-`);
-              runAgenticLoop(
-                event,
-                [
-                  ...msgs,
-                  { role: "assistant", content: JSON.stringify(agentPayload) },
-                  { role: "user", content: `<tool_result tool="${agentPayload.tool}" path="${agentPayload.path}">
+` : `
+\`\`\`tool
+🔍 Reading \`${queryOrPath}\`...
+\`\`\`
+`;
+              event.sender.send("ai:chunk", statusMsg);
+              executeTool(agentPayload.tool, queryOrPath, fileTreeNodes).then((result) => {
+                runAgenticLoop(
+                  event,
+                  [
+                    ...msgs,
+                    { role: "assistant", content: JSON.stringify(agentPayload) },
+                    { role: "user", content: `<tool_result tool="${agentPayload.tool}" query_or_path="${queryOrPath}">
 ${result}
 </tool_result>` }
-                ],
-                model,
-                fileTreeNodes
-              ).then(resolve2).catch(reject);
+                  ],
+                  model,
+                  fileTreeNodes
+                ).then(resolve2).catch(reject);
+              }).catch((err) => {
+                event.sender.send("ai:chunk", `
+\`\`\`error
+Tool failed: ${err.message}
+\`\`\`
+`);
+                resolve2();
+              });
             } else {
               event.sender.send("ai:done", agentPayload);
               resolve2();
@@ -2050,6 +2070,60 @@ ${result}
       if (activeChatRequest === req) activeChatRequest = null;
       event.sender.send("ai:done", null);
       reject(err);
+    });
+  });
+}
+async function searchWeb(query) {
+  return new Promise((resolve2) => {
+    const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    https.get(searchUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    }, (res) => {
+      if (res.statusCode !== 200) {
+        return resolve2(`Web search failed with status ${res.statusCode}.`);
+      }
+      let data = "";
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+      res.on("end", () => {
+        try {
+          const results = [];
+          const resultRegex = /<a class="result__snippet[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+          const titleRegex = /<h2 class="result__title">[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>[\s\S]*?<\/h2>/gi;
+          let titleMatch = titleRegex.exec(data);
+          let snippetMatch = resultRegex.exec(data);
+          let count = 0;
+          while (titleMatch && snippetMatch && count < 4) {
+            const title = titleMatch[1].replace(/<[^>]+>/g, "").trim();
+            const snippet = snippetMatch[2].replace(/<[^>]+>/g, "").trim();
+            const url = snippetMatch[1];
+            results.push(`Source ${count + 1}:
+Title: ${title}
+URL: ${url}
+Snippet: ${snippet}
+`);
+            titleMatch = titleRegex.exec(data);
+            snippetMatch = resultRegex.exec(data);
+            count++;
+          }
+          if (results.length === 0) {
+            resolve2(`No search results found for "${query}".`);
+          } else {
+            resolve2(`Search Results for "${query}":
+
+${results.join("\n")}
+
+Use these facts to formulate your answer.`);
+          }
+        } catch (err) {
+          resolve2(`Error parsing search results: ${String(err)}`);
+        }
+      });
+    }).on("error", (err) => {
+      resolve2(`Network error during web search: ${err.message}`);
     });
   });
 }

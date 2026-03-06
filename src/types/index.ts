@@ -36,8 +36,9 @@ export interface AIPlan {
 
 export interface AIToolCall {
   type: 'tool_call'
-  tool: 'read_file' | 'list_directory'
-  path: string
+  tool: 'read_file' | 'list_directory' | 'search_web'
+  path?: string // For file tools
+  query?: string // For web search
 }
 
 export type AIResponsePayload = AIResponse | AIQuestions | AIPlan | AIToolCall | null
@@ -59,6 +60,7 @@ export interface OllamaPayload {
   pinnedFiles: { path: string; content: string }[]
   history: { role: 'user' | 'assistant'; content: string }[]
   model: string
+  webSearch?: boolean
   selectedCode?: {
     content: string
     startLine: number

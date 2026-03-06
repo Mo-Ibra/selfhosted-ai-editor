@@ -16,6 +16,7 @@
 
 import { ipcMain, IpcMainInvokeEvent } from "electron";
 import http from "node:http";
+import https from "node:https";
 import fs from "node:fs";
 import path from "node:path";
 import { ChatPayload, CompletePayload, FileNode, Message } from "./types";
@@ -132,6 +133,7 @@ function buildSystemPrompt(payload: ChatPayload): string {
 ## TOOLS AVAILABLE
 - **read_file**: Read the content of a file you need to inspect.
 - **list_directory**: List files/folders inside a path.
+${payload.webSearch ? `- **search_web**: Search the internet for up-to-date information. Use to answer questions outside your training data.` : ''}
 
 ---
 ## RESPONSE PROTOCOL — Output exactly ONE of these formats per response:
@@ -151,6 +153,7 @@ function buildSystemPrompt(payload: ChatPayload): string {
 \`\`\`json
 { "type": "tool_call", "tool": "read_file", "path": "src/App.tsx" }
 \`\`\`
+*(For \`search_web\`, replace \`path\` with \`query\`)*
 
 ### 4. EDITS (SEARCH/REPLACE)
 \`\`\`xml
@@ -233,10 +236,14 @@ function resolveRelativePath(toolPath: string, fileTreeNodes: FileNode[]): strin
  * → The LLM must reason over tool failures as text.
  *
  * @param tool Tool name
- * @param toolPath Target path
+ * @param toolPath Target path (or query for web search)
  * @param fileTreeNodes Project file tree
  */
-function executeTool(tool: string, toolPath: string, fileTreeNodes: FileNode[]): string {
+async function executeTool(tool: string, toolPath: string, fileTreeNodes: FileNode[]): Promise<string> {
+
+  if (tool === 'search_web') {
+    return await searchWeb(toolPath);
+  }
 
   // Resolve the relative path
   const fullPath = resolveRelativePath(toolPath, fileTreeNodes);
@@ -330,20 +337,30 @@ async function runAgenticLoop(event: IpcMainInvokeEvent,
 
             // If the response is a tool call, execute it
             if (agentPayload?.type === 'tool_call') {
-              const result = executeTool(agentPayload.tool, agentPayload.path, fileTreeNodes)
-              event.sender.send('ai:chunk', `\n\`\`\`tool\n🔍 Reading \`${agentPayload.path}\`...\n\`\`\`\n`)
+              const queryOrPath = agentPayload.query || agentPayload.path || '';
+              const statusMsg = agentPayload.tool === 'search_web'
+                ? `\n\`\`\`tool\n🌐 Searching web for \`${queryOrPath}\`...\n\`\`\`\n`
+                : `\n\`\`\`tool\n🔍 Reading \`${queryOrPath}\`...\n\`\`\`\n`;
+              event.sender.send('ai:chunk', statusMsg)
 
-              // Re-enter the loop with the tool result
-              runAgenticLoop(
-                event,
-                [
-                  ...msgs,
-                  { role: 'assistant', content: JSON.stringify(agentPayload) },
-                  { role: 'user', content: `<tool_result tool="${agentPayload.tool}" path="${agentPayload.path}">\n${result}\n</tool_result>` },
-                ],
-                model,
-                fileTreeNodes,
-              ).then(resolve).catch(reject)
+              executeTool(agentPayload.tool, queryOrPath, fileTreeNodes)
+                .then(result => {
+                  // Re-enter the loop with the tool result
+                  runAgenticLoop(
+                    event,
+                    [
+                      ...msgs,
+                      { role: 'assistant', content: JSON.stringify(agentPayload) },
+                      { role: 'user', content: `<tool_result tool="${agentPayload.tool}" query_or_path="${queryOrPath}">\n${result}\n</tool_result>` },
+                    ],
+                    model,
+                    fileTreeNodes,
+                  ).then(resolve).catch(reject)
+                })
+                .catch(err => {
+                  event.sender.send('ai:chunk', `\n\`\`\`error\nTool failed: ${err.message}\n\`\`\`\n`);
+                  resolve();
+                });
             } else {
               // If the response is not a tool call, send it to the renderer
               event.sender.send('ai:done', agentPayload)
@@ -382,8 +399,69 @@ async function runAgenticLoop(event: IpcMainInvokeEvent,
   })
 };
 
+// ─── Web Search Tool ───────────────────────────────────────────────
+
+/**
+ * Performs a lightweight web search using DuckDuckGo HTML version.
+ * Extracts titles and snippets using regex to avoid heavy DOM parsers.
+ */
+async function searchWeb(query: string): Promise<string> {
+  return new Promise((resolve) => {
+    const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+
+    https.get(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    }, (res) => {
+      if (res.statusCode !== 200) {
+        return resolve(`Web search failed with status ${res.statusCode}.`);
+      }
+
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const results: string[] = [];
+
+          // Regex to extract DuckDuckGo HTML result items
+          const resultRegex = /<a class="result__snippet[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+          const titleRegex = /<h2 class="result__title">[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>[\s\S]*?<\/h2>/gi;
+
+          let titleMatch = titleRegex.exec(data);
+          let snippetMatch = resultRegex.exec(data);
+
+          let count = 0;
+          while (titleMatch && snippetMatch && count < 4) {
+            const title = titleMatch[1].replace(/<[^>]+>/g, '').trim();
+            const snippet = snippetMatch[2].replace(/<[^>]+>/g, '').trim();
+            const url = snippetMatch[1];
+
+            results.push(`Source ${count + 1}:\nTitle: ${title}\nURL: ${url}\nSnippet: ${snippet}\n`);
+
+            titleMatch = titleRegex.exec(data);
+            snippetMatch = resultRegex.exec(data);
+            count++;
+          }
+
+          if (results.length === 0) {
+            resolve(`No search results found for "${query}".`);
+          } else {
+            resolve(`Search Results for "${query}":\n\n${results.join('\n')}\n\nUse these facts to formulate your answer.`);
+          }
+        } catch (err) {
+          resolve(`Error parsing search results: ${String(err)}`);
+        }
+      });
+    }).on('error', (err) => {
+      resolve(`Network error during web search: ${err.message}`);
+    });
+  });
+}
+
 /**
  * Registers all AI-related IPC handlers in the main process.
+
  *
  * This function connects the renderer process to the local AI engine (Ollama),
  * and exposes three main capabilities:

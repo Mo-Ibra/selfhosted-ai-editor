@@ -24,6 +24,7 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
   const [acceptedEdits, setAcceptedEdits] = useState<string[]>([]);
   const [rejectedEdits, setRejectedEdits] = useState<string[]>([]);
   const [selectedCode, setSelectedCode] = useState<SelectedCode | null>(null);
+  const [webSearch, setWebSearch] = useState(false);
   const [aiModel, setAiModel] = useState(
     () => localStorage.getItem('ai-model') || 'qwen3-coder:480b-cloud'
   )
@@ -58,9 +59,10 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
       pinnedFiles: extraFiles,
       history: [...messages, userMsg].map(({ role, content }) => ({ role, content })),
       model: aiModel,
+      webSearch,
       selectedCode: selectedCode ?? undefined,
     })
-  }, [folderPath, fileTree, fileContents, activeFilePath, pinnedFiles, messages, aiModel, selectedCode, readFile])
+  }, [folderPath, fileTree, fileContents, activeFilePath, pinnedFiles, messages, aiModel, webSearch, selectedCode, readFile])
 
   // ── SEARCH/REPLACE Engine ──
   const applyEditToContent = useCallback((edit: AIEdit, baseContent?: string): { targetPath: string; newContent: string } | null => {
@@ -300,6 +302,7 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
     acceptedEdits,
     rejectedEdits,
     selectedCode, setSelectedCode,
+    webSearch, setWebSearch,
     sendMessage,
     acceptEdit,
     rejectEdit,
