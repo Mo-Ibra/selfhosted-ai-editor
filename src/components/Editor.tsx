@@ -116,8 +116,39 @@ export default function Editor({
       onSaveRef.current();
     });
 
-    editor.onKeyDown(() => {
-      play();
+    editor.onKeyDown((e: any) => {
+      // Prevent sound on combined shortcuts (like Ctrl+S, Alt+F, etc)
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      // Prevent sound on navigation, deletion, and modifier keys
+      const kc = e.keyCode;
+      const isNonTypingKey = (
+        kc === monaco.KeyCode.Backspace ||
+        kc === monaco.KeyCode.Delete ||
+        kc === monaco.KeyCode.LeftArrow ||
+        kc === monaco.KeyCode.RightArrow ||
+        kc === monaco.KeyCode.UpArrow ||
+        kc === monaco.KeyCode.DownArrow ||
+        kc === monaco.KeyCode.PageUp ||
+        kc === monaco.KeyCode.PageDown ||
+        kc === monaco.KeyCode.Home ||
+        kc === monaco.KeyCode.End ||
+        kc === monaco.KeyCode.Escape ||
+        kc === monaco.KeyCode.Shift ||
+        kc === monaco.KeyCode.Ctrl ||
+        kc === monaco.KeyCode.Alt ||
+        kc === monaco.KeyCode.Meta ||
+        kc === monaco.KeyCode.CapsLock ||
+        kc === monaco.KeyCode.Insert ||
+        kc === monaco.KeyCode.Tab ||
+        kc === monaco.KeyCode.Space ||
+        kc === monaco.KeyCode.Enter ||
+        kc >= monaco.KeyCode.F1 && kc <= monaco.KeyCode.F12
+      );
+
+      if (!isNonTypingKey) {
+        play();
+      }
     });
 
     editor.onDidChangeCursorSelection(handleSelectionChange);
