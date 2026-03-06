@@ -99,6 +99,12 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
           {/* ── Editor ── */}
           <Section title="Editor" icon="✏️">
             <ToggleRow
+              label="Typing Sounds"
+              description="Play a satisfying mechanical click sound when typing in the editor"
+              value={settings.keyboardSound}
+              onChange={(v) => updateSetting("keyboardSound", v)}
+            />
+            <ToggleRow
               label="AI Auto Completion"
               description="Suggest inline completions while you type using the configured AI model"
               value={settings.autoCompletion}

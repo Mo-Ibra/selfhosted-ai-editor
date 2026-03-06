@@ -3,12 +3,14 @@ import { useState, useCallback } from "react";
 export interface EditorSettings {
   autoCompletion: boolean;
   theme: 'catppuccin' | 'midnight' | 'monokai' | 'light';
+  keyboardSound: boolean;
   // future settings go here...
 }
 
 const DEFAULT_SETTINGS: EditorSettings = {
   autoCompletion: true,
   theme: 'catppuccin',
+  keyboardSound: false,
 };
 
 

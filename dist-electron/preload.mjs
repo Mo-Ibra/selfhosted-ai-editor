@@ -34,5 +34,6 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   },
   // AI Completions
   getAICompletion: (prefix, suffix, model) => electron.ipcRenderer.invoke("ai:complete", { prefix, suffix, model }),
+  // AI Stop
   stopAI: () => electron.ipcRenderer.send("ai:stop")
 });

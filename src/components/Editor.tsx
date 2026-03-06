@@ -8,6 +8,7 @@ import { useDiffDecorations } from '../hooks/useDiffDecorations';
 import { registerAutocompleteProvider } from '../hooks/useAutoComplete'
 import { DiffActions } from './DiffActions'
 import { useApp } from '../AppProvider'
+import { useKeyboardSound } from '../hooks/useKeyboardSound'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const BASE_EDITOR_OPTIONS = {
@@ -62,6 +63,7 @@ export default function Editor({
   onSelectionChange,
 }: EditorProps) {
   const { editorFontSize, editorLineHeight, settings } = useApp()
+  const { play } = useKeyboardSound(settings.keyboardSound)
   const editorRef = useRef<any>(null)
   const onSaveRef = useRef(onSave)
   const folderPathRef = useRef(folderPath)
@@ -114,9 +116,13 @@ export default function Editor({
       onSaveRef.current();
     });
 
+    editor.onKeyDown(() => {
+      play();
+    });
+
     editor.onDidChangeCursorSelection(handleSelectionChange);
 
-  }, [configureMonaco, handleSelectionChange]);
+  }, [configureMonaco, handleSelectionChange, play]);
 
   const hasEditsForCurrentFile = pendingEdits.some(
     (e) => e.file === filePath || filePath?.endsWith(e.file.replace(/\//g, '\\')),
