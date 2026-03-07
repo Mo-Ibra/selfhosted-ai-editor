@@ -3,7 +3,8 @@
 - Add keyboard typing sound when typing and add it to settings (Done)
 - Fix all Theme issues
 - Add AI Modal Config Screen for AI config like auto completion and etc
-- Add web search and thinking features like ollama
+- Add web search and thinking features like ollama (Done)
+- Add Git integration (line highlights for added/modified/deleted lines) (Done)
 - Make AI Chat collapsable
 - Make File Explorer collapsable
 - Add shortcuts for collabse file explorer and AI
@@ -12,3 +13,4 @@
 - Make Editor can open more than one file besides each other
 - Fix table in response in AI Chat
 - Add RTL in AI Chat and can swtich between them
+- Remove Pinned files

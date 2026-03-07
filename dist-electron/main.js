@@ -7,6 +7,7 @@ import * as sp from "node:path";
 import sp__default, { resolve, join, relative, sep } from "node:path";
 import fs from "fs";
 import path from "path";
+import { exec } from "child_process";
 import { EventEmitter } from "node:events";
 import fs$1, { unwatchFile, watchFile, watch as watch$1, stat as stat$1 } from "node:fs";
 import { lstat, stat, readdir, realpath, open } from "node:fs/promises";
@@ -1812,6 +1813,18 @@ function registerFsHandlers(getWin) {
       console.error(`[fs:writeFile] Failed to write: ${filePath}`, err);
       throw err;
     }
+  });
+  ipcMain.handle("fs:getGitOriginalFile", async (_event, filePath, folderPath) => {
+    return new Promise((resolve2) => {
+      const relativePath = path.relative(folderPath, filePath).replace(/\\/g, "/");
+      exec(`git show HEAD:"${relativePath}"`, { cwd: folderPath }, (error, stdout) => {
+        if (error) {
+          resolve2(null);
+          return;
+        }
+        resolve2(stdout);
+      });
+    });
   });
 }
 const JSON_BLOCK_RE = /```(?:json)?\s*([\s\S]*?)```/i;

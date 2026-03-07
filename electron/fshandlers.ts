@@ -1,6 +1,7 @@
 import { ipcMain, dialog, BrowserWindow } from "electron";
 import fs from "fs";
 import path from "path";
+import { exec } from "child_process";
 import chokidar, { FSWatcher } from "chokidar";
 import { FileNode } from "../src/types";
 
@@ -146,4 +147,21 @@ export function registerFsHandlers(getWin: () => BrowserWindow | null) {
       throw err
     }
   })
+
+  // Handle getting original file from Git
+  ipcMain.handle('fs:getGitOriginalFile', async (_event, filePath: string, folderPath: string) => {
+    return new Promise<string | null>((resolve) => {
+      // Convert absolute file path to path relative to the git repo (assumed to be folderPath)
+      const relativePath = path.relative(folderPath, filePath).replace(/\\/g, '/');
+
+      exec(`git show HEAD:"${relativePath}"`, { cwd: folderPath }, (error, stdout) => {
+        if (error) {
+          // File might be new, untracked, or no git repo exists.
+          resolve(null);
+          return;
+        }
+        resolve(stdout);
+      });
+    });
+  });
 }

@@ -9,6 +9,7 @@ import { registerAutocompleteProvider } from '../hooks/useAutoComplete'
 import { DiffActions } from './DiffActions'
 import { useApp } from '../AppProvider'
 import { useKeyboardSound } from '../hooks/useKeyboardSound'
+import { useGitDecorations } from '../hooks/useGitDecorations'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const BASE_EDITOR_OPTIONS = {
@@ -16,6 +17,7 @@ const BASE_EDITOR_OPTIONS = {
   fontLigatures: true,
   lineHeight: 22,
   minimap: { enabled: true },
+  glyphMargin: true, // NEEDED for Git diff colors
   scrollBeyondLastLine: false,
   smoothScrolling: true,
   cursorBlinking: 'phase' as const,
@@ -84,6 +86,15 @@ export default function Editor({
 
   // Render diff decorations for pending edits
   useDiffDecorations(editorRef, monacoRef, pendingEdits, filePath);
+
+  // Render Git diff decorations
+  useGitDecorations({
+    editor: editorRef.current,
+    monacoInstance: monacoRef.current,
+    folderPath: folderPathRef.current,
+    activeFilePath: filePath,
+    content: content,
+  });
 
   const handleSelectionChange = useCallback(() => {
     const editor = editorRef.current

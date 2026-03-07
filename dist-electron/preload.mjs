@@ -5,6 +5,7 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   readTree: (folderPath) => electron.ipcRenderer.invoke("fs:readTree", folderPath),
   readFile: (filePath) => electron.ipcRenderer.invoke("fs:readFile", filePath),
   writeFile: (filePath, content) => electron.ipcRenderer.invoke("fs:writeFile", filePath, content),
+  getGitOriginalFile: (filePath, folderPath) => electron.ipcRenderer.invoke("fs:getGitOriginalFile", filePath, folderPath),
   chat: (payload) => electron.ipcRenderer.invoke("ai:chat", payload),
   onChatChunk: (callback) => {
     electron.ipcRenderer.on("ai:chunk", (_event, chunk) => callback(chunk));

@@ -1459,6 +1459,30 @@ body,
 }
 
 
+/* ─── Git Margin Decorations ─── */
+.git-decoration-added {
+  border-left: 3px solid #2ea043;
+  margin-left: 5px;
+}
+
+.git-decoration-modified {
+  border-left: 3px solid #3b82f6;
+  margin-left: 5px;
+}
+
+.git-decoration-deleted {
+  width: 0 !important;
+  height: 0 !important;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid #f85149;
+  margin-left: 5px;
+  position: relative;
+  /* Shift down slightly so it sits between lines */
+  top: 10px;
+}
+
+
 /* ─── Settings Page ───────────────────────────────────────────────── */
 .settings-overlay {
   position: absolute;
