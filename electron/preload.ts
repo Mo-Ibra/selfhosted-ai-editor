@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (filePath: string) => ipcRenderer.invoke('fs:readFile', filePath),
   writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:writeFile', filePath, content),
   getGitOriginalFile: (filePath: string, folderPath: string) => ipcRenderer.invoke('fs:getGitOriginalFile', filePath, folderPath),
+  getGitStatus: (folderPath: string) => ipcRenderer.invoke('fs:getGitStatus', folderPath),
   chat: (payload: object) => ipcRenderer.invoke('ai:chat', payload),
   onChatChunk: (callback: (chunk: string) => void) => {
     ipcRenderer.on('ai:chunk', (_event, chunk) => callback(chunk))

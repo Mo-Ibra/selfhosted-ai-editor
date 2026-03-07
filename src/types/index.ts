@@ -74,6 +74,7 @@ export interface ElectronAPI {
   readFile: (filePath: string) => Promise<string>
   writeFile: (filePath: string, content: string) => Promise<void>
   getGitOriginalFile: (filePath: string, folderPath: string) => Promise<string | null>
+  getGitStatus: (folderPath: string) => Promise<Record<string, string>>
   chat: (payload: OllamaPayload) => Promise<void>
   onChatChunk: (callback: (chunk: string) => void) => void
   onChatDone: (callback: (response: AIResponse | null) => void) => void

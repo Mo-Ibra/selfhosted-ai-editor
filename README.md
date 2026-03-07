@@ -5,6 +5,7 @@
 - Add AI Modal Config Screen for AI config like auto completion and etc
 - Add web search and thinking features like ollama (Done)
 - Add Git integration (line highlights for added/modified/deleted lines) (Done)
+- Add Git status colors to File Explorer (Sidebar) (Done)
 - Make AI Chat collapsable
 - Make File Explorer collapsable
 - Add shortcuts for collabse file explorer and AI

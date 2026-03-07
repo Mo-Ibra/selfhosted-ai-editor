@@ -1483,6 +1483,24 @@ body,
 }
 
 
+/* ─── File Explorer Git Status ━━━ */
+.file-tree-item.git-status-modified {
+  color: #f4f8da;
+  /* Blue/Cyan (similar to VSCode modified) */
+}
+
+.file-tree-item.git-status-untracked {
+  color: #2ea043;
+  /* Green (similar to VSCode untracked) */
+}
+
+.file-tree-item.git-status-deleted {
+  color: #f85149;
+  /* Red */
+  text-decoration: line-through;
+}
+
+
 /* ─── Settings Page ───────────────────────────────────────────────── */
 .settings-overlay {
   position: absolute;

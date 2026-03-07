@@ -5,6 +5,7 @@ interface FileExplorerProps {
   tree: FileNode[]
   activeFile: string | null
   pinnedFiles: string[]
+  gitStatus: Record<string, string>
   onFileClick: (path: string) => void
   onPinToggle: (path: string) => void
   onOpenFolder: () => void
@@ -15,6 +16,7 @@ function FileItem({
   depth,
   activeFile,
   pinnedFiles,
+  gitStatus,
   onFileClick,
   onPinToggle,
 }: {
@@ -22,12 +24,20 @@ function FileItem({
   depth: number
   activeFile: string | null
   pinnedFiles: string[]
+  gitStatus: Record<string, string>
   onFileClick: (path: string) => void
   onPinToggle: (path: string) => void
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const isPinned = pinnedFiles.includes(node.path)
   const isActive = activeFile === node.path
+
+  // Normalize Windows paths in the map for matching
+  const targetPath = node.path.replace(/\\/g, '/');
+  // Match path against gitStatus keys (which are relative from the root)
+  // Find if any key in gitStatus matches the end of our absolute targetPath
+  const statusKey = Object.keys(gitStatus).find(k => targetPath.endsWith(k));
+  const statusClass = statusKey ? `git-status-${gitStatus[statusKey]}` : '';
 
   const getFileIcon = (name: string, isDir: boolean) => {
     if (isDir) return '📁'
@@ -46,7 +56,7 @@ function FileItem({
     return (
       <div>
         <div
-          className="file-tree-item directory"
+          className={`file-tree-item directory ${statusClass}`}
           style={{ paddingLeft: `${8 + depth * 10}px` }}
           onClick={() => setIsOpen(!isOpen)}
         >
@@ -63,6 +73,7 @@ function FileItem({
                 depth={depth + 1}
                 activeFile={activeFile}
                 pinnedFiles={pinnedFiles}
+                gitStatus={gitStatus}
                 onFileClick={onFileClick}
                 onPinToggle={onPinToggle}
               />
@@ -75,7 +86,7 @@ function FileItem({
 
   return (
     <div
-      className={`file-tree-item ${isActive ? 'active' : ''} ${isPinned ? 'pinned' : ''}`}
+      className={`file-tree-item ${isActive ? 'active' : ''} ${isPinned ? 'pinned' : ''} ${statusClass}`}
       style={{ paddingLeft: `${8 + depth * 10}px` }}
       onClick={() => onFileClick(node.path)}
     >
@@ -96,6 +107,7 @@ interface FileExplorerProps {
   tree: FileNode[]
   activeFile: string | null
   pinnedFiles: string[]
+  gitStatus: Record<string, string>
   onFileClick: (path: string) => void
   onPinToggle: (path: string) => void
   onOpenFolder: () => void
@@ -107,6 +119,7 @@ export default function FileExplorer({
   tree,
   activeFile,
   pinnedFiles,
+  gitStatus,
   onFileClick,
   onPinToggle,
   onOpenFolder,
@@ -162,6 +175,7 @@ export default function FileExplorer({
                   depth={0}
                   activeFile={activeFile}
                   pinnedFiles={pinnedFiles}
+                  gitStatus={gitStatus}
                   onFileClick={onFileClick}
                   onPinToggle={onPinToggle}
                 />
@@ -178,6 +192,7 @@ export default function FileExplorer({
             depth={0}
             activeFile={activeFile}
             pinnedFiles={pinnedFiles}
+            gitStatus={gitStatus}
             onFileClick={onFileClick}
             onPinToggle={onPinToggle}
           />

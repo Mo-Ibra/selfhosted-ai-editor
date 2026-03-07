@@ -1826,6 +1826,34 @@ function registerFsHandlers(getWin) {
       });
     });
   });
+  ipcMain.handle("fs:getGitStatus", async (_event, folderPath) => {
+    return new Promise((resolve2) => {
+      exec(`git status --porcelain`, { cwd: folderPath }, (error, stdout) => {
+        if (error) {
+          resolve2({});
+          return;
+        }
+        const statusMap = {};
+        const lines = stdout.split("\n");
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const status = line.substring(0, 2);
+          let filePath = line.substring(3).trim();
+          if (filePath.startsWith('"') && filePath.endsWith('"')) {
+            filePath = filePath.substring(1, filePath.length - 1);
+          }
+          if (status.includes("?") || status.includes("A")) {
+            statusMap[filePath] = "untracked";
+          } else if (status.includes("M") || status.includes("R")) {
+            statusMap[filePath] = "modified";
+          } else if (status.includes("D")) {
+            statusMap[filePath] = "deleted";
+          }
+        }
+        resolve2(statusMap);
+      });
+    });
+  });
 }
 const JSON_BLOCK_RE = /```(?:json)?\s*([\s\S]*?)```/i;
 const JSON_OBJECT_RE = /(\{[\s\S]*\})/;

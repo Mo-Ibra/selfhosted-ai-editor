@@ -10,6 +10,7 @@ export function useFileSystem() {
   const [folderPath, setFolderPath] = useState<string | null>(null);
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [fileContents, setFileContents] = useState<Record<string, string>>({});
+  const [gitStatus, setGitStatus] = useState<Record<string, string>>({});
 
   /**
    * File Watcher
@@ -20,8 +21,17 @@ export function useFileSystem() {
 
     if (!folderPath) return;
 
-    const refresh = () => window.electronAPI.readTree(folderPath).then(setFileTree);
-    window.electronAPI.onFsChanged(refresh);
+    const refreshTree = () => window.electronAPI.readTree(folderPath).then(setFileTree);
+    const refreshGitStatus = () => window.electronAPI.getGitStatus(folderPath).then(setGitStatus);
+
+    const refreshAll = () => {
+      refreshTree();
+      refreshGitStatus();
+    }
+
+    refreshAll(); // Initial fetch
+
+    window.electronAPI.onFsChanged(refreshAll);
     return () => window.electronAPI.removeAllListeners('fs:changed')
 
   }, [folderPath]);
@@ -37,7 +47,8 @@ export function useFileSystem() {
     const path = await window.electronAPI.openFolder();
     if (!path) return null;
     setFolderPath(path);
-    setFileTree(await window.electronAPI.readTree(path))
+    setFileTree(await window.electronAPI.readTree(path));
+    setGitStatus(await window.electronAPI.getGitStatus(path));
     setFileContents({});
     return path;
   }, [])
@@ -66,7 +77,10 @@ export function useFileSystem() {
 
     await window.electronAPI.writeFile(filePath, content);
     setFileContents((prev) => ({ ...prev, [filePath]: content }))
-    if (folderPath) setFileTree(await window.electronAPI.readTree(folderPath))
+    if (folderPath) {
+      setFileTree(await window.electronAPI.readTree(folderPath))
+      setGitStatus(await window.electronAPI.getGitStatus(folderPath))
+    }
 
   }, [folderPath])
 
@@ -100,5 +114,6 @@ export function useFileSystem() {
     writeFile,
     updateFileContent,
     refreshTree,
+    gitStatus,
   }
 }

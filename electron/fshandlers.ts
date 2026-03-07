@@ -164,4 +164,46 @@ export function registerFsHandlers(getWin: () => BrowserWindow | null) {
       });
     });
   });
+
+  // Handle getting git status for the whole project
+  ipcMain.handle('fs:getGitStatus', async (_event, folderPath: string) => {
+    return new Promise<Record<string, string>>((resolve) => {
+      exec(`git status --porcelain`, { cwd: folderPath }, (error, stdout) => {
+        if (error) {
+          // Not a git repository or error executing git
+          resolve({});
+          return;
+        }
+
+        const statusMap: Record<string, string> = {};
+        const lines = stdout.split('\n');
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          // git status --porcelain output is typically:
+          // XY VALUE
+          // Where X is index status, Y is working tree status
+          // Examples: " M index.ts", "?? newfile.js", "D  deleted.txt"
+          const status = line.substring(0, 2);
+          // file path starts at index 3, and we might need to remove quotes if file has spaces
+          let filePath = line.substring(3).trim();
+          if (filePath.startsWith('"') && filePath.endsWith('"')) {
+            filePath = filePath.substring(1, filePath.length - 1);
+          }
+
+          // We map to simplified states: 'modified', 'untracked', 'deleted'
+          if (status.includes('?') || status.includes('A')) {
+            statusMap[filePath] = 'untracked';
+          } else if (status.includes('M') || status.includes('R')) {
+            statusMap[filePath] = 'modified';
+          } else if (status.includes('D')) {
+            statusMap[filePath] = 'deleted';
+          }
+        }
+
+        resolve(statusMap);
+      });
+    });
+  });
 }
