@@ -1,5 +1,4 @@
 ## Todo
-
 - Add keyboard typing sound when typing and add it to settings (Done)
 - Fix all Theme issues
 - Add AI Modal Config Screen for AI config like auto completion and etc (Done)
