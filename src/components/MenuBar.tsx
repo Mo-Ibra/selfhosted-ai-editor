@@ -3,11 +3,20 @@ import { menuItems } from "../utils/menu-items";
 import { useApp } from "../AppProvider";
 
 interface MenuBarProps {
-  onOpenSettings?: () => void;
-  onOpenAIConfig?: () => void;
+  onOpenSettings: () => void;
+  onOpenAIConfig: () => void;
+  onOpenShortcuts: () => void;
+  onToggleSidebar: () => void;
+  onToggleChat: () => void;
 }
 
-function MenuBar({ onOpenSettings, onOpenAIConfig }: MenuBarProps) {
+function MenuBar({ 
+  onOpenSettings, 
+  onOpenAIConfig, 
+  onOpenShortcuts,
+  onToggleSidebar,
+  onToggleChat
+}: MenuBarProps) {
   const { zoomIn, zoomOut, resetZoom } = useApp();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -17,8 +26,11 @@ function MenuBar({ onOpenSettings, onOpenAIConfig }: MenuBarProps) {
     zoomIn,
     zoomOut,
     resetZoom,
-    openSettings: () => onOpenSettings?.(),
-    openAIConfig: () => onOpenAIConfig?.(),
+    openSettings: onOpenSettings,
+    openAIConfig: onOpenAIConfig,
+    openShortcuts: onOpenShortcuts,
+    toggleSidebar: onToggleSidebar,
+    toggleChat: onToggleChat,
   };
 
   // ── Dispatch a named action ───────────────────────────────────────
@@ -28,7 +40,7 @@ function MenuBar({ onOpenSettings, onOpenAIConfig }: MenuBarProps) {
         actionHandlers[action]();
       }
     },
-    [zoomIn, zoomOut, resetZoom, onOpenSettings, onOpenAIConfig]
+    [zoomIn, zoomOut, resetZoom, onOpenSettings, onOpenAIConfig, onOpenShortcuts, onToggleSidebar, onToggleChat]
   );
 
   // ── Close dropdown when clicking outside ─────────────────────────
@@ -41,42 +53,6 @@ function MenuBar({ onOpenSettings, onOpenAIConfig }: MenuBarProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  // ── Global keyboard shortcuts ─────────────────────────────────────
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const ctrl = e.ctrlKey || e.metaKey;
-      if (!ctrl) return;
-
-      // Zoom In: Ctrl+= or Ctrl++
-      if (e.key === "=" || e.key === "+") {
-        e.preventDefault();
-        zoomIn();
-        return;
-      }
-      // Zoom Out: Ctrl+-
-      if (e.key === "-") {
-        e.preventDefault();
-        zoomOut();
-        return;
-      }
-      // Reset Zoom: Ctrl+0
-      if (e.key === "0") {
-        e.preventDefault();
-        resetZoom();
-        return;
-      }
-      // Settings: Ctrl+,
-      if (e.key === ",") {
-        e.preventDefault();
-        onOpenSettings?.();
-        return;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [zoomIn, zoomOut, resetZoom]);
 
   // ── Menu open/hover handlers ──────────────────────────────────────
   const handleMenuClick = (label: string) => {

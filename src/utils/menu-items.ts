@@ -46,8 +46,8 @@ export const menuItems: MenuGroup[] = [
   {
     label: "View",
     items: [
-      { label: "Explorer", shortcut: "Ctrl+Shift+E", icon: "📁" },
-      { label: "AI Chat", shortcut: "Ctrl+Shift+A", icon: "🤖" },
+      { label: "Explorer", shortcut: "Ctrl+B", icon: "📁", action: "toggleSidebar" },
+      { label: "AI Chat", shortcut: "Ctrl+J", icon: "🤖", action: "toggleChat" },
       { divider: true, label: "" },
       { label: "Zoom In", shortcut: "Ctrl+=", icon: "🔍", action: "zoomIn" },
       { label: "Zoom Out", shortcut: "Ctrl+-", icon: "🔎", action: "zoomOut" },
@@ -60,9 +60,9 @@ export const menuItems: MenuGroup[] = [
     label: "Settings",
     items: [
       { label: "Preferences", shortcut: "Ctrl+,", icon: "⚙", action: "openSettings" },
-      { label: "AI Model Config", icon: "🧠", action: "openAIConfig" },
+      { label: "AI Model Config", shortcut: "Ctrl+Shift+M", icon: "🧠", action: "openAIConfig" },
       { divider: true, label: "" },
-      { label: "Keyboard Shortcuts", shortcut: "Ctrl+K Ctrl+S", icon: "⌨" },
+      { label: "Keyboard Shortcuts", shortcut: "Ctrl+/", icon: "⌨", action: "openShortcuts" },
       { divider: true, label: "" },
       { label: "About AI Editor", icon: "ℹ" },
     ],

@@ -6,6 +6,10 @@ export interface EditorSettings {
   keyboardSound: boolean;
   aiModel: string;
   chatDirection: 'ltr' | 'rtl';
+  sidebarWidth: number;
+  chatWidth: number;
+  showSidebar: boolean;
+  showChat: boolean;
   // future settings go here...
 }
 
@@ -15,6 +19,10 @@ const DEFAULT_SETTINGS: EditorSettings = {
   keyboardSound: false,
   aiModel: 'gpt-oss:120b-cloud',
   chatDirection: 'ltr',
+  sidebarWidth: 240,
+  chatWidth: 340,
+  showSidebar: true,
+  showChat: true,
 };
 
 
