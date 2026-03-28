@@ -104,12 +104,6 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
               value={settings.keyboardSound}
               onChange={(v) => updateSetting("keyboardSound", v)}
             />
-            <ToggleRow
-              label="AI Auto Completion"
-              description="Suggest inline completions while you type using the configured AI model"
-              value={settings.autoCompletion}
-              onChange={(v) => updateSetting("autoCompletion", v)}
-            />
           </Section>
         </div>
 

@@ -764,6 +764,36 @@ body,
   flex: 1;
 }
 
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-direction {
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.btn-direction:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-direction.rtl {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .chat-model-badge {
   font-size: 10px;
   padding: 3px 8px;
@@ -781,6 +811,31 @@ body,
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.chat-messages.rtl {
+  direction: rtl;
+}
+
+.chat-messages.rtl .chat-message-content {
+  text-align: right;
+}
+
+.chat-messages.rtl .chat-message-role {
+  text-align: right;
+}
+
+.chat-messages.rtl .chat-edit-item {
+  direction: ltr; /* Keep code edits LTR for readability */
+}
+
+.chat-messages.rtl .chat-message-content code {
+  direction: ltr;
+  display: inline-block;
+}
+
+.chat-messages.rtl .chat-message-content pre {
+  direction: ltr;
 }
 
 .chat-messages::-webkit-scrollbar {
@@ -927,22 +982,48 @@ body,
 }
 
 .chat-message-content table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100%;
-  font-size: 12px;
-  margin: 6px 0;
+  font-size: 13px;
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .chat-message-content th,
 .chat-message-content td {
-  border: 1px solid var(--border);
-  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: 8px 12px;
   text-align: left;
 }
 
+.chat-message-content th:last-child,
+.chat-message-content td:last-child {
+  border-right: none;
+}
+
+.chat-message-content tr:last-child td {
+  border-bottom: none;
+}
+
 .chat-message-content th {
-  background: var(--bg-overlay);
+  background: var(--bg-active);
   font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.chat-message-content tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.chat-message-content tr:hover {
+  background: var(--bg-hover);
 }
 
 .chat-message-edits {

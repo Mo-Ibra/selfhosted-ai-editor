@@ -5,6 +5,7 @@ export interface EditorSettings {
   theme: 'catppuccin' | 'midnight' | 'monokai' | 'light';
   keyboardSound: boolean;
   aiModel: string;
+  chatDirection: 'ltr' | 'rtl';
   // future settings go here...
 }
 
@@ -13,6 +14,7 @@ const DEFAULT_SETTINGS: EditorSettings = {
   theme: 'catppuccin',
   keyboardSound: false,
   aiModel: 'gpt-oss:120b-cloud',
+  chatDirection: 'ltr',
 };
 
 

@@ -12,6 +12,6 @@
 - Add shortcuts screen to change shortcuts if you want
 - Add About AI Editor Screen
 - Make Editor can open more than one file besides each other
-- Fix table in response in AI Chat
+- Fix table in response in AI Chat (Done)
 - Add RTL in AI Chat and can swtich between them
 - Remove Pinned files

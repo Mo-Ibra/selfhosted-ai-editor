@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, KeyboardEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { ChatMessage, AIEdit } from '../types'
+import { useApp } from '../AppProvider'
 
 interface AIChatProps {
   messages: ChatMessage[]
@@ -31,6 +33,7 @@ export default function AIChat({
   setWebSearch,
   onStop,
 }: AIChatProps) {
+  const { settings, updateSetting } = useApp()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -63,15 +66,28 @@ export default function AIChat({
     e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`
   }
 
+  const toggleDirection = () => {
+    updateSetting('chatDirection', settings.chatDirection === 'ltr' ? 'rtl' : 'ltr')
+  }
+
   return (
     <div className="chat-panel">
       <div className="chat-header">
         <span>🤖</span>
         <h3>AI Assistant</h3>
-        <span className="chat-model-badge">{aiModel ? aiModel.split(':')[0] : 'assistant'}</span>
+        <div className="chat-header-actions">
+          <button 
+            className={`btn-direction ${settings.chatDirection}`} 
+            onClick={toggleDirection}
+            title={`Switch to ${settings.chatDirection === 'ltr' ? 'RTL' : 'LTR'}`}
+          >
+            {settings.chatDirection === 'ltr' ? 'LTR' : 'RTL'}
+          </button>
+          <span className="chat-model-badge">{aiModel ? aiModel.split(':')[0] : 'assistant'}</span>
+        </div>
       </div>
 
-      <div className="chat-messages">
+      <div className={`chat-messages ${settings.chatDirection}`}>
         {messages.length === 0 && (
           <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 32 }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>💬</div>
@@ -89,7 +105,7 @@ export default function AIChat({
             </span>
             <div className="chat-message-content">
               {msg.role === 'assistant' ? (
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
               ) : (
                 msg.content
               )}
