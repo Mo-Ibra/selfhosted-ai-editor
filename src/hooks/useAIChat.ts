@@ -15,9 +15,10 @@ interface UseAIChatOptions {
   pinnedFiles: string[]
   readFile: (path: string) => Promise<string>
   writeFile: (path: string, content: string) => Promise<void>
+  aiModel: string
 }
 
-export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, pinnedFiles, readFile, writeFile }: UseAIChatOptions) {
+export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, pinnedFiles, readFile, writeFile, aiModel }: UseAIChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [pendingEdits, setPendingEdits] = useState<AIEdit[]>([]);
@@ -25,16 +26,8 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
   const [rejectedEdits, setRejectedEdits] = useState<string[]>([]);
   const [selectedCode, setSelectedCode] = useState<SelectedCode | null>(null);
   const [webSearch, setWebSearch] = useState(false);
-  const [aiModel, setAiModel] = useState(
-    () => localStorage.getItem('ai-model') || 'qwen3-coder:480b-cloud'
-  )
 
   const streamingMsgId = useRef<string | null>(null)
-
-  // ── Persist Model ───
-  useEffect(() => {
-    localStorage.setItem('ai-model', aiModel)
-  }, [aiModel])
 
   // ── Send Message ──
   const sendMessage = useCallback(async (text: string) => {
@@ -295,7 +288,7 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
   }, [applyEditToContent, writeFile, folderPath])
 
   return {
-    aiModel, setAiModel,
+    aiModel,
     messages,
     isStreaming,
     pendingEdits,

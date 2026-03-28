@@ -4,9 +4,10 @@ import { useApp } from "../AppProvider";
 
 interface MenuBarProps {
   onOpenSettings?: () => void;
+  onOpenAIConfig?: () => void;
 }
 
-function MenuBar({ onOpenSettings }: MenuBarProps) {
+function MenuBar({ onOpenSettings, onOpenAIConfig }: MenuBarProps) {
   const { zoomIn, zoomOut, resetZoom } = useApp();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -17,6 +18,7 @@ function MenuBar({ onOpenSettings }: MenuBarProps) {
     zoomOut,
     resetZoom,
     openSettings: () => onOpenSettings?.(),
+    openAIConfig: () => onOpenAIConfig?.(),
   };
 
   // ── Dispatch a named action ───────────────────────────────────────
@@ -26,7 +28,7 @@ function MenuBar({ onOpenSettings }: MenuBarProps) {
         actionHandlers[action]();
       }
     },
-    [zoomIn, zoomOut, resetZoom, onOpenSettings]
+    [zoomIn, zoomOut, resetZoom, onOpenSettings, onOpenAIConfig]
   );
 
   // ── Close dropdown when clicking outside ─────────────────────────

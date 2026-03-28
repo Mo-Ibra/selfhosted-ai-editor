@@ -2,7 +2,7 @@ import { useApp } from "../AppProvider";
 import FileExplorer from "./FileExplorer";
 
 function Sidebar() {
-  const { fileTree, activeFilePath, pinnedFiles, gitStatus, aiModel, openFile, togglePin, openFolder, setAiModel } = useApp()
+  const { fileTree, activeFilePath, pinnedFiles, gitStatus, openFile, togglePin, openFolder } = useApp()
 
   return (
     <FileExplorer
@@ -13,8 +13,6 @@ function Sidebar() {
       onFileClick={openFile}
       onPinToggle={togglePin}
       onOpenFolder={openFolder}
-      aiModel={aiModel}
-      onModelChange={setAiModel}
     />
   )
 }

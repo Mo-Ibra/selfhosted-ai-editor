@@ -29,9 +29,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fs = useFileSystem();
   const editor = useEditor({ fileContents: fs.fileContents, updateFileContent: fs.updateFileContent, writeFile: fs.writeFile, readFile: fs.readFile })
   const terminal = useTerminal();
-  const chat = useAIChat({ folderPath: fs.folderPath, fileTree: fs.fileTree, fileContents: fs.fileContents, activeFilePath: editor.activeFilePath, pinnedFiles: editor.pinnedFiles, readFile: fs.readFile, writeFile: fs.writeFile })
   const zoom = useZoom();
   const appSettings = useSettings();
+  const chat = useAIChat({ 
+    folderPath: fs.folderPath, 
+    fileTree: fs.fileTree, 
+    fileContents: fs.fileContents, 
+    activeFilePath: editor.activeFilePath, 
+    pinnedFiles: editor.pinnedFiles, 
+    readFile: fs.readFile, 
+    writeFile: fs.writeFile,
+    aiModel: appSettings.settings.aiModel
+  })
 
   // ── Composed action: reset all state on folder open ──────────────
   const openFolder = useCallback(async () => {

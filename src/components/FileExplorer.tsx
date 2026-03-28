@@ -111,8 +111,6 @@ interface FileExplorerProps {
   onFileClick: (path: string) => void
   onPinToggle: (path: string) => void
   onOpenFolder: () => void
-  aiModel: string
-  onModelChange: (model: string) => void
 }
 
 export default function FileExplorer({
@@ -123,8 +121,6 @@ export default function FileExplorer({
   onFileClick,
   onPinToggle,
   onOpenFolder,
-  aiModel,
-  onModelChange,
 }: FileExplorerProps) {
   // Find nodes for pinned files to reuse FileItem
   const findNodeByPath = (nodes: FileNode[], path: string): FileNode | null => {
@@ -145,17 +141,6 @@ export default function FileExplorer({
         <button className="btn-open-folder" onClick={onOpenFolder}>
           <span>📂</span> Open Folder
         </button>
-      </div>
-
-      <div className="model-selector-box">
-        <label className="model-label">OLLAMA MODEL</label>
-        <input
-          className="model-input"
-          value={aiModel}
-          onChange={(e) => onModelChange(e.target.value)}
-          placeholder="e.g. qwen:7b"
-          spellCheck={false}
-        />
       </div>
 
       <div className="explorer-body">

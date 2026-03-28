@@ -1730,3 +1730,33 @@ body,
   font-size: 11px;
   color: var(--text-muted);
 }
+
+/* AI Config Specific */
+.settings-row.no-cursor {
+  cursor: default;
+}
+
+.settings-row.no-cursor:hover {
+  background: transparent;
+  padding-left: 4px;
+  padding-right: 4px;
+  margin: 0;
+}
+
+.ai-config-page .model-input {
+  width: 240px;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.ai-config-page .model-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
