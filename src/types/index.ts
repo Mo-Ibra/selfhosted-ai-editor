@@ -70,6 +70,7 @@ export interface OllamaPayload {
 
 export interface ElectronAPI {
   openFolder: () => Promise<string | null>
+  selectFile: () => Promise<string | null>
   readTree: (folderPath: string) => Promise<FileNode[]>
   readFile: (filePath: string) => Promise<string>
   writeFile: (filePath: string, content: string) => Promise<void>

@@ -2,6 +2,7 @@
 const electron = require("electron");
 electron.contextBridge.exposeInMainWorld("electronAPI", {
   openFolder: () => electron.ipcRenderer.invoke("fs:openFolder"),
+  selectFile: () => electron.ipcRenderer.invoke("fs:selectFile"),
   readTree: (folderPath) => electron.ipcRenderer.invoke("fs:readTree", folderPath),
   readFile: (filePath) => electron.ipcRenderer.invoke("fs:readFile", filePath),
   writeFile: (filePath, content) => electron.ipcRenderer.invoke("fs:writeFile", filePath, content),

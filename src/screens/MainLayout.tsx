@@ -53,17 +53,17 @@ function MainLayout() {
   return (
     <div className={`main-layout ${isResizingSidebar || isResizingChat ? 'resizing' : ''}`}>
       {/* Sidebar */}
-      <div 
-        className={`sidebar-container ${!settings.showSidebar ? 'hidden' : ''}`} 
+      <div
+        className={`sidebar-container ${!settings.showSidebar ? 'hidden' : ''}`}
         style={{ width: settings.showSidebar ? settings.sidebarWidth : 0 }}
       >
         <Sidebar />
       </div>
-      
+
       {/* Sidebar Handle */}
       {settings.showSidebar && (
-        <div 
-          className={`resize-handle sidebar-handle ${isResizingSidebar ? 'active' : ''}`} 
+        <div
+          className={`resize-handle sidebar-handle ${isResizingSidebar ? 'active' : ''}`}
           onMouseDown={startResizingSidebar}
         />
       )}
@@ -73,14 +73,14 @@ function MainLayout() {
 
       {/* Chat Handle */}
       {settings.showChat && (
-        <div 
-          className={`resize-handle chat-handle ${isResizingChat ? 'active' : ''}`} 
+        <div
+          className={`resize-handle chat-handle ${isResizingChat ? 'active' : ''}`}
           onMouseDown={startResizingChat}
         />
       )}
 
       {/* Chat */}
-      <div 
+      <div
         className={`chat-container ${!settings.showChat ? 'hidden' : ''}`}
         style={{ width: settings.showChat ? settings.chatWidth : 0 }}
       >

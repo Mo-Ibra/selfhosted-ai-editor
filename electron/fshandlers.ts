@@ -119,6 +119,20 @@ export function registerFsHandlers(getWin: () => BrowserWindow | null) {
     return folderPath
   });
 
+  // Handle selecting a single file via dialog
+  ipcMain.handle('fs:selectFile', async () => {
+    const win = getWin();
+    if (!win) return null;
+
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+      properties: ['openFile'],
+      title: "Open File",
+    });
+
+    if (canceled || !filePaths[0]) return null;
+    return filePaths[0];
+  });
+
   // Handle reading the file tree
   ipcMain.handle('fs:readTree', (_event, folderPath: string) => {
     return buildFileTree(folderPath)

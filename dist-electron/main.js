@@ -1793,6 +1793,16 @@ function registerFsHandlers(getWin) {
     });
     return folderPath;
   });
+  ipcMain.handle("fs:selectFile", async () => {
+    const win2 = getWin();
+    if (!win2) return null;
+    const { canceled, filePaths } = await dialog.showOpenDialog(win2, {
+      properties: ["openFile"],
+      title: "Open File"
+    });
+    if (canceled || !filePaths[0]) return null;
+    return filePaths[0];
+  });
   ipcMain.handle("fs:readTree", (_event, folderPath) => {
     return buildFileTree(folderPath);
   });

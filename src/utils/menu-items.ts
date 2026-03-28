@@ -17,7 +17,7 @@ export const menuItems: MenuGroup[] = [
     label: "File",
     items: [
       { label: "Open Folder…", shortcut: "Ctrl+K Ctrl+O", icon: "📂", action: "openFolder" },
-      { label: "Open File…", shortcut: "Ctrl+O", icon: "📄" },
+      { label: "Open File…", shortcut: "Ctrl+O", icon: "📄", action: "openFile" },
       { divider: true, label: "" },
       { label: "Save", shortcut: "Ctrl+S", icon: "💾", action: "saveFile" },
       { label: "Save All", shortcut: "Ctrl+Shift+S", icon: "💾", action: "saveAll" },

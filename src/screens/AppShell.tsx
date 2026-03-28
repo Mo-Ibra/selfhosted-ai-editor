@@ -12,7 +12,7 @@ function AppShell() {
   const {
     folderPath, settings, updateSetting,
     zoomIn, zoomOut, resetZoom,
-    editorRef, openFolder, saveFile, saveAll, closeFile
+    editorRef, openFolder, openFile, saveFile, saveAll, closeFile
   } = useApp()
   const [showSettings, setShowSettings] = useState(false)
   const [showAIConfig, setShowAIConfig] = useState(false)
@@ -32,6 +32,10 @@ function AppShell() {
     switch (action) {
       // File Actions
       case 'openFolder': await openFolder(); break;
+      case 'openFile': 
+        const filePath = await window.electronAPI.selectFile();
+        if (filePath) await openFile(filePath);
+        break;
       case 'saveFile': await saveFile(); break;
       case 'saveAll': await saveAll(); break;
       case 'closeFile': closeFile(); break;
@@ -80,6 +84,13 @@ function AppShell() {
       if (ctrl) {
         if (e.key.toLowerCase() === 'b') { e.preventDefault(); handleAction('toggleSidebar'); }
         if (e.key.toLowerCase() === 'j') { e.preventDefault(); handleAction('toggleChat'); }
+        if (e.key.toLowerCase() === 'o') { e.preventDefault(); handleAction('openFile'); }
+        if (e.key.toLowerCase() === 's') {
+          e.preventDefault();
+          if (e.shiftKey) handleAction('saveAll');
+          else handleAction('saveFile');
+        }
+        if (e.key.toLowerCase() === 'w') { e.preventDefault(); handleAction('closeFile'); }
         if (e.key === ',') { e.preventDefault(); handleAction('openSettings'); }
         if (e.key === '/') { e.preventDefault(); handleAction('openShortcuts'); }
         if (e.shiftKey && e.key.toLowerCase() === 'm') { e.preventDefault(); handleAction('openAIConfig'); }
