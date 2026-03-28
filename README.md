@@ -14,4 +14,4 @@
 - Make Editor can open more than one file besides each other
 - Fix table in response in AI Chat (Done)
 - Add RTL in AI Chat and can swtich between them (Done)
-- Remove Pinned files
+- Remove Pinned files (Done)

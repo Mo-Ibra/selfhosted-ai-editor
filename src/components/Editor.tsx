@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState } from 'react'
+import { useRef, useCallback, useState, useEffect } from 'react'
 import MonacoEditor, { OnMount } from '@monaco-editor/react'
 import { AIEdit } from '../types'
 import { getLanguage } from "../utils/language";
@@ -64,7 +64,7 @@ export default function Editor({
   onSave,
   onSelectionChange,
 }: EditorProps) {
-  const { editorFontSize, editorLineHeight, settings } = useApp()
+  const { editorFontSize, editorLineHeight, settings, editorRef: ctxEditorRef } = useApp()
   const { play } = useKeyboardSound(settings.keyboardSound)
   const editorRef = useRef<any>(null)
   const onSaveRef = useRef(onSave)
@@ -120,6 +120,7 @@ export default function Editor({
   const handleMount: OnMount = useCallback((editor, monaco) => {
 
     editorRef.current = editor;
+    ctxEditorRef.current = editor;
     configureMonaco(monaco);
     registerAutocompleteProvider(monaco, editor, autoCompleteEnabledRef);
 
@@ -164,7 +165,15 @@ export default function Editor({
 
     editor.onDidChangeCursorSelection(handleSelectionChange);
 
-  }, [configureMonaco, handleSelectionChange, play]);
+  }, [configureMonaco, handleSelectionChange, play, ctxEditorRef]);
+
+  useEffect(() => {
+    return () => {
+      if (ctxEditorRef.current === editorRef.current) {
+        ctxEditorRef.current = null;
+      }
+    };
+  }, [ctxEditorRef]);
 
   const hasEditsForCurrentFile = pendingEdits.some(
     (e) => e.file === filePath || filePath?.endsWith(e.file.replace(/\//g, '\\')),

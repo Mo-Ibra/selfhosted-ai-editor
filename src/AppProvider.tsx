@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useCallback, useContext } from "react";
+import { createContext, ReactNode, useCallback, useContext, useRef } from "react";
 import { useTerminal } from "./hooks/useTerminal";
 import { useFileSystem } from "./hooks/useFileSystem";
 import { useEditor } from "./hooks/useEditor";
@@ -13,7 +13,9 @@ export type AppContextValue =
   ReturnType<typeof useTerminal> &
   ReturnType<typeof useAIChat> &
   ReturnType<typeof useZoom> &
-  ReturnType<typeof useSettings>
+  ReturnType<typeof useSettings> & {
+    editorRef: React.MutableRefObject<any>;
+  }
 
 // ─── Context ───
 const AppContext = createContext<AppContextValue | null>(null);
@@ -31,6 +33,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const terminal = useTerminal();
   const zoom = useZoom();
   const appSettings = useSettings();
+  const editorRef = useRef<any>(null);
   const chat = useAIChat({
     folderPath: fs.folderPath,
     fileTree: fs.fileTree,
@@ -51,7 +54,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fs.openFolder, editor.reset, chat.resetChat]);
 
   return (
-    <AppContext.Provider value={{ ...fs, ...editor, ...terminal, ...chat, ...zoom, ...appSettings, openFolder }}>
+    <AppContext.Provider value={{ ...fs, ...editor, ...terminal, ...chat, ...zoom, ...appSettings, openFolder, editorRef }}>
       {children}
     </AppContext.Provider>
   )

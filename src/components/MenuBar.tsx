@@ -1,47 +1,13 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { menuItems } from "../utils/menu-items";
-import { useApp } from "../AppProvider";
 
 interface MenuBarProps {
-  onOpenSettings: () => void;
-  onOpenAIConfig: () => void;
-  onOpenShortcuts: () => void;
-  onToggleSidebar: () => void;
-  onToggleChat: () => void;
+  onAction: (action: string) => void;
 }
 
-function MenuBar({ 
-  onOpenSettings, 
-  onOpenAIConfig, 
-  onOpenShortcuts,
-  onToggleSidebar,
-  onToggleChat
-}: MenuBarProps) {
-  const { zoomIn, zoomOut, resetZoom } = useApp();
+function MenuBar({ onAction }: MenuBarProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
-
-  // ── Map of action name → handler ─────────────────────────────────
-  const actionHandlers: Record<string, () => void> = {
-    zoomIn,
-    zoomOut,
-    resetZoom,
-    openSettings: onOpenSettings,
-    openAIConfig: onOpenAIConfig,
-    openShortcuts: onOpenShortcuts,
-    toggleSidebar: onToggleSidebar,
-    toggleChat: onToggleChat,
-  };
-
-  // ── Dispatch a named action ───────────────────────────────────────
-  const dispatch = useCallback(
-    (action?: string) => {
-      if (action && actionHandlers[action]) {
-        actionHandlers[action]();
-      }
-    },
-    [zoomIn, zoomOut, resetZoom, onOpenSettings, onOpenAIConfig, onOpenShortcuts, onToggleSidebar, onToggleChat]
-  );
 
   // ── Close dropdown when clicking outside ─────────────────────────
   useEffect(() => {
@@ -85,7 +51,7 @@ function MenuBar({
                     className={`menubar-dropdown-item ${item.disabled ? "disabled" : ""}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      dispatch(item.action);
+                      if (item.action) onAction(item.action);
                       setOpenMenu(null);
                     }}
                   >

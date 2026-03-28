@@ -9,7 +9,11 @@ import TitleBar from "../components/TitleBar";
 import WelcomeScreen from "./WelcomeScreen";
 
 function AppShell() {
-  const { folderPath, settings, updateSetting, zoomIn, zoomOut, resetZoom } = useApp()
+  const {
+    folderPath, settings, updateSetting,
+    zoomIn, zoomOut, resetZoom,
+    editorRef, openFolder, saveFile, saveAll, closeFile
+  } = useApp()
   const [showSettings, setShowSettings] = useState(false)
   const [showAIConfig, setShowAIConfig] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
@@ -22,12 +26,50 @@ function AppShell() {
     updateSetting('showChat', !settings.showChat)
   }, [settings.showChat, updateSetting])
 
+  const handleAction = useCallback(async (action: string) => {
+    const editor = editorRef.current;
+
+    switch (action) {
+      // File Actions
+      case 'openFolder': await openFolder(); break;
+      case 'saveFile': await saveFile(); break;
+      case 'saveAll': await saveAll(); break;
+      case 'closeFile': closeFile(); break;
+      case 'exit': window.electronAPI.windowClose(); break;
+
+      // Edit Actions
+      case 'undo': editor?.focus(); editor?.getModel()?.undo(); break;
+      case 'redo': editor?.focus(); editor?.getModel()?.redo(); break;
+      case 'cut': editor?.focus(); document.execCommand('cut'); break;
+      case 'copy': editor?.focus(); document.execCommand('copy'); break;
+      case 'paste': editor?.focus(); document.execCommand('paste'); break;
+      case 'find': editor?.focus(); editor?.getAction('actions.find')?.run(); break;
+      case 'replace': editor?.focus(); editor?.getAction('editor.action.startFindReplaceAction')?.run(); break;
+      case 'selectAll': editor?.focus(); editor?.getAction('editor.action.selectAll')?.run(); break;
+
+      // Layout Actions
+      case 'toggleSidebar': toggleSidebar(); break;
+      case 'toggleChat': toggleChat(); break;
+
+      // View/Zoom Actions
+      case 'zoomIn': zoomIn(); break;
+      case 'zoomOut': zoomOut(); break;
+      case 'resetZoom': resetZoom(); break;
+
+      // Overlay Actions
+      case 'openSettings': setShowSettings(true); break;
+      case 'openAIConfig': setShowAIConfig(true); break;
+      case 'openShortcuts': setShowShortcuts(true); break;
+
+      default: console.warn('Unhandled action:', action);
+    }
+  }, [editorRef, toggleSidebar, toggleChat, zoomIn, zoomOut, resetZoom]);
+
   // Global Keyboard Shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
 
-      // Escape to close all overlays
       if (e.key === "Escape") {
         setShowSettings(false)
         setShowAIConfig(false)
@@ -36,57 +78,27 @@ function AppShell() {
       }
 
       if (ctrl) {
-        // Layout: Ctrl+B (Sidebar), Ctrl+J (Chat)
-        if (e.key.toLowerCase() === 'b') {
-          e.preventDefault()
-          toggleSidebar()
-        }
-        if (e.key.toLowerCase() === 'j') {
-          e.preventDefault()
-          toggleChat()
-        }
-        // Overlays: Ctrl+, (Settings), Ctrl+/ (Shortcuts), Ctrl+Shift+M (AI Config)
-        if (e.key === ',') {
-          e.preventDefault()
-          setShowSettings(prev => !prev)
-        }
-        if (e.key === '/') {
-          e.preventDefault()
-          setShowShortcuts(prev => !prev)
-        }
-        if (e.shiftKey && e.key.toLowerCase() === 'm') {
-          e.preventDefault()
-          setShowAIConfig(prev => !prev)
-        }
-        // Zoom: Ctrl+=, Ctrl+-, Ctrl+0
-        if (e.key === '=' || e.key === '+') {
-          e.preventDefault()
-          zoomIn()
-        }
-        if (e.key === '-') {
-          e.preventDefault()
-          zoomOut()
-        }
-        if (e.key === '0') {
-          e.preventDefault()
-          resetZoom()
-        }
+        if (e.key.toLowerCase() === 'b') { e.preventDefault(); handleAction('toggleSidebar'); }
+        if (e.key.toLowerCase() === 'j') { e.preventDefault(); handleAction('toggleChat'); }
+        if (e.key === ',') { e.preventDefault(); handleAction('openSettings'); }
+        if (e.key === '/') { e.preventDefault(); handleAction('openShortcuts'); }
+        if (e.shiftKey && e.key.toLowerCase() === 'm') { e.preventDefault(); handleAction('openAIConfig'); }
+        if (e.key === '=' || e.key === '+') { e.preventDefault(); handleAction('zoomIn'); }
+        if (e.key === '-') { e.preventDefault(); handleAction('zoomOut'); }
+        if (e.key === '0') { e.preventDefault(); handleAction('resetZoom'); }
+
+        // Let the editor handle Ctrl+Z, Ctrl+Y, Ctrl+C, etc. naturally if focused
+        // But for menu consistency, we have handleAction for the mouse clicks
       }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [settings.showSidebar, settings.showChat, toggleSidebar, toggleChat, zoomIn, zoomOut, resetZoom])
+  }, [handleAction])
 
   return (
     <div className="app" data-theme={settings.theme}>
       <TitleBar />
-      <MenuBar
-        onOpenSettings={() => setShowSettings(true)}
-        onOpenAIConfig={() => setShowAIConfig(true)}
-        onOpenShortcuts={() => setShowShortcuts(true)}
-        onToggleSidebar={toggleSidebar}
-        onToggleChat={toggleChat}
-      />
+      <MenuBar onAction={handleAction} />
 
       <div style={{ flex: 1, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
         {folderPath ? <MainLayout /> : <WelcomeScreen />}

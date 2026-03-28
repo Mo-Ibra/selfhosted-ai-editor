@@ -44,12 +44,23 @@ export function useEditor({ fileContents, updateFileContent, writeFile, readFile
     if (content === undefined) return;
     await writeFile(activeFilePath, content)
     setDirtyFiles((prev) => {
-      // Remove file from dirty files
       const next = new Set(prev);
       next.delete(activeFilePath)
       return next;
     })
   }, [activeFilePath, fileContents, writeFile])
+
+  // Save all dirty files
+  const saveAll = useCallback(async () => {
+    const dirty = Array.from(dirtyFiles);
+    for (const path of dirty) {
+      const content = fileContents[path];
+      if (content !== undefined) {
+        await writeFile(path, content);
+      }
+    }
+    setDirtyFiles(new Set());
+  }, [dirtyFiles, fileContents, writeFile]);
 
   // Reset
   const reset = useCallback(() => {
@@ -66,6 +77,7 @@ export function useEditor({ fileContents, updateFileContent, writeFile, readFile
     closeFile,
     changeContent,
     saveFile,
+    saveAll,
     reset,
   }
 }
