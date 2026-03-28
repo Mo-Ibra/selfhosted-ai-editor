@@ -31,13 +31,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const terminal = useTerminal();
   const zoom = useZoom();
   const appSettings = useSettings();
-  const chat = useAIChat({ 
-    folderPath: fs.folderPath, 
-    fileTree: fs.fileTree, 
-    fileContents: fs.fileContents, 
-    activeFilePath: editor.activeFilePath, 
-    pinnedFiles: editor.pinnedFiles, 
-    readFile: fs.readFile, 
+  const chat = useAIChat({
+    folderPath: fs.folderPath,
+    fileTree: fs.fileTree,
+    fileContents: fs.fileContents,
+    activeFilePath: editor.activeFilePath,
+    readFile: fs.readFile,
     writeFile: fs.writeFile,
     aiModel: appSettings.settings.aiModel
   })

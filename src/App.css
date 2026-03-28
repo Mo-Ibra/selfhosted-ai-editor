@@ -334,15 +334,17 @@ body,
   --chat-width-base: 340px;
 }
 
-.sidebar-container, .chat-container {
+.sidebar-container,
+.chat-container {
   display: flex;
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
-  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  /* transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease; */
 }
 
-.sidebar-container.hidden, .chat-container.hidden {
+.sidebar-container.hidden,
+.chat-container.hidden {
   width: 0 !important;
   opacity: 0;
   pointer-events: none;
@@ -485,10 +487,6 @@ body,
   color: var(--accent);
 }
 
-.file-tree-item.pinned {
-  color: var(--purple);
-}
-
 .file-tree-icon {
   font-size: 13px;
   flex-shrink: 0;
@@ -531,31 +529,6 @@ body,
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
-}
-
-.file-tree-pin-btn {
-  opacity: 0;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 11px;
-  padding: 2px 4px;
-  border-radius: 3px;
-  transition: opacity 0.1s, color 0.1s;
-}
-
-.file-tree-item:hover .file-tree-pin-btn {
-  opacity: 1;
-}
-
-.file-tree-pin-btn:hover {
-  color: var(--purple);
-}
-
-.file-tree-pin-btn.pinned {
-  opacity: 1;
-  color: var(--purple);
 }
 
 /* ─── Editor Area ────────────────────────────────────────────────── */
@@ -842,7 +815,8 @@ body,
 }
 
 .chat-messages.rtl .chat-edit-item {
-  direction: ltr; /* Keep code edits LTR for readability */
+  direction: ltr;
+  /* Keep code edits LTR for readability */
 }
 
 .chat-messages.rtl .chat-message-content code {

@@ -4,10 +4,8 @@ import { FileNode } from '../types'
 interface FileExplorerProps {
   tree: FileNode[]
   activeFile: string | null
-  pinnedFiles: string[]
   gitStatus: Record<string, string>
   onFileClick: (path: string) => void
-  onPinToggle: (path: string) => void
   onOpenFolder: () => void
 }
 
@@ -15,21 +13,16 @@ function FileItem({
   node,
   depth,
   activeFile,
-  pinnedFiles,
   gitStatus,
   onFileClick,
-  onPinToggle,
 }: {
   node: FileNode
   depth: number
   activeFile: string | null
-  pinnedFiles: string[]
   gitStatus: Record<string, string>
   onFileClick: (path: string) => void
-  onPinToggle: (path: string) => void
 }) {
   const [isOpen, setIsOpen] = useState(false)
-  const isPinned = pinnedFiles.includes(node.path)
   const isActive = activeFile === node.path
 
   // Normalize Windows paths in the map for matching
@@ -72,10 +65,8 @@ function FileItem({
                 node={child}
                 depth={depth + 1}
                 activeFile={activeFile}
-                pinnedFiles={pinnedFiles}
                 gitStatus={gitStatus}
                 onFileClick={onFileClick}
-                onPinToggle={onPinToggle}
               />
             ))}
           </div>
@@ -86,19 +77,12 @@ function FileItem({
 
   return (
     <div
-      className={`file-tree-item ${isActive ? 'active' : ''} ${isPinned ? 'pinned' : ''} ${statusClass}`}
+      className={`file-tree-item ${isActive ? 'active' : ''} ${statusClass}`}
       style={{ paddingLeft: `${8 + depth * 10}px` }}
       onClick={() => onFileClick(node.path)}
     >
       <span className="file-tree-icon">{getFileIcon(node.name, false)}</span>
       <span className="file-tree-name">{node.name}</span>
-      <button
-        className={`file-tree-pin-btn ${isPinned ? 'pinned' : ''}`}
-        onClick={(e) => { e.stopPropagation(); onPinToggle(node.path) }}
-        title={isPinned ? 'Unpin file' : 'Pin file (always in AI context)'}
-      >
-        {isPinned ? '📌' : '📍'}
-      </button>
     </div>
   )
 }
@@ -106,20 +90,16 @@ function FileItem({
 interface FileExplorerProps {
   tree: FileNode[]
   activeFile: string | null
-  pinnedFiles: string[]
   gitStatus: Record<string, string>
   onFileClick: (path: string) => void
-  onPinToggle: (path: string) => void
   onOpenFolder: () => void
 }
 
 export default function FileExplorer({
   tree,
   activeFile,
-  pinnedFiles,
   gitStatus,
   onFileClick,
-  onPinToggle,
   onOpenFolder,
 }: FileExplorerProps) {
   // Find nodes for pinned files to reuse FileItem
@@ -144,31 +124,6 @@ export default function FileExplorer({
       </div>
 
       <div className="explorer-body">
-        {pinnedFiles.length > 0 && (
-          <>
-            <div className="explorer-section-label">📌 Pinned</div>
-            {pinnedFiles.map((path) => {
-              const node = findNodeByPath(tree, path) || {
-                name: path.split(/[\\/]/).pop() || path,
-                path: path,
-                isDir: false
-              }
-              return (
-                <FileItem
-                  key={`pinned-${path}`}
-                  node={node}
-                  depth={0}
-                  activeFile={activeFile}
-                  pinnedFiles={pinnedFiles}
-                  gitStatus={gitStatus}
-                  onFileClick={onFileClick}
-                  onPinToggle={onPinToggle}
-                />
-              )
-            })}
-          </>
-        )}
-
         <div className="explorer-section-label" style={{ marginTop: 12 }}>PROJECT</div>
         {tree.map((node) => (
           <FileItem
@@ -176,10 +131,8 @@ export default function FileExplorer({
             node={node}
             depth={0}
             activeFile={activeFile}
-            pinnedFiles={pinnedFiles}
             gitStatus={gitStatus}
             onFileClick={onFileClick}
-            onPinToggle={onPinToggle}
           />
         ))}
       </div>

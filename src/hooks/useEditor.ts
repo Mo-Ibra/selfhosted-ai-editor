@@ -10,12 +10,11 @@ interface UseEditorOptions {
 /**
  * Editor Hook
  * 
- * Manages the active file, pinned files, and dirty files.
+ * Manages the active file and dirty files.
  */
 export function useEditor({ fileContents, updateFileContent, writeFile, readFile }: UseEditorOptions) {
 
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
-  const [pinnedFiles, setPinnedFiles] = useState<string[]>([]);
   const [dirtyFiles, setDirtyFiles] = useState<Set<string>>(new Set());
 
   // ────── Actions ────── //
@@ -52,17 +51,9 @@ export function useEditor({ fileContents, updateFileContent, writeFile, readFile
     })
   }, [activeFilePath, fileContents, writeFile])
 
-  // Toggle pin
-  const togglePin = useCallback((filePath: string) => {
-    setPinnedFiles((prev) =>
-      prev.includes(filePath) ? prev.filter((p) => p !== filePath) : [...prev, filePath]
-    )
-  }, [])
-
   // Reset
   const reset = useCallback(() => {
     setActiveFilePath(null);
-    setPinnedFiles([]);
     setDirtyFiles(new Set())
   }, [])
 
@@ -70,13 +61,11 @@ export function useEditor({ fileContents, updateFileContent, writeFile, readFile
     activeFilePath,
     activeFileName: activeFilePath?.split(/[\\/]/).pop(),
     activeContent: activeFilePath ? fileContents[activeFilePath] ?? '' : '',
-    pinnedFiles,
     dirtyFiles,
     openFile,
     closeFile,
     changeContent,
     saveFile,
-    togglePin,
     reset,
   }
 }

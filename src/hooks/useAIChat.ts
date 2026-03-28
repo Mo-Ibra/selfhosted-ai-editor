@@ -12,13 +12,12 @@ interface UseAIChatOptions {
   fileTree: FileNode[]
   fileContents: Record<string, string>
   activeFilePath: string | null
-  pinnedFiles: string[]
   readFile: (path: string) => Promise<string>
   writeFile: (path: string, content: string) => Promise<void>
   aiModel: string
 }
 
-export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, pinnedFiles, readFile, writeFile, aiModel }: UseAIChatOptions) {
+export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, readFile, writeFile, aiModel }: UseAIChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [pendingEdits, setPendingEdits] = useState<AIEdit[]>([]);
@@ -43,7 +42,7 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
     setAcceptedEdits([])
     setRejectedEdits([])
 
-    const extraFiles = await buildExtraFiles(text, pinnedFiles, fileContents, readFile);
+    const extraFiles = await buildExtraFiles(text, fileContents, readFile);
 
     await window.electronAPI.chat({
       activeFile: activeFilePath ? (fileContents[activeFilePath] ?? '') : '',
@@ -55,7 +54,7 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
       webSearch,
       selectedCode: selectedCode ?? undefined,
     })
-  }, [folderPath, fileTree, fileContents, activeFilePath, pinnedFiles, messages, aiModel, webSearch, selectedCode, readFile])
+  }, [folderPath, fileTree, fileContents, activeFilePath, messages, aiModel, webSearch, selectedCode, readFile])
 
   // ── SEARCH/REPLACE Engine ──
   const applyEditToContent = useCallback((edit: AIEdit, baseContent?: string): { targetPath: string; newContent: string } | null => {
@@ -310,16 +309,12 @@ export function useAIChat({ folderPath, fileTree, fileContents, activeFilePath, 
 
 async function buildExtraFiles(
   text: string,
-  pinnedFiles: string[],
   fileContents: Record<string, string>,
   readFile: (path: string) => Promise<string>
 ) {
   const mentions = text.match(/@(\S+)/g) ?? []
   const mentioned = await resolveMentions(mentions, fileContents, readFile)
-  const pinned = await Promise.all(
-    pinnedFiles.map(async (p) => ({ path: p, content: fileContents[p] ?? await readFile(p) }))
-  )
-  return mergeUnique(pinned, mentioned)
+  return mentioned
 }
 
 async function resolveMentions(
@@ -337,17 +332,6 @@ async function resolveMentions(
     })
   )
   return results.filter(Boolean) as { path: string; content: string }[]
-}
-
-function mergeUnique(
-  primary: { path: string; content: string }[],
-  secondary: { path: string; content: string }[]
-) {
-  const merged = [...primary]
-  for (const item of secondary) {
-    if (!merged.some((f) => f.path === item.path)) merged.push(item)
-  }
-  return merged
 }
 
 function resolveTargetPath(
